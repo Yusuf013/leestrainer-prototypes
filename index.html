@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototypes – uitbreiding op Estafette</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--purple:#961982;--purple-2:#7c1269;--zblue:#0069B4;--sky:#D9F1FB;--mint:#A6DEC1;--lime:#93D00F;--ink:#3c3c3c;--soft:#6a6a72}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Nunito",system-ui,sans-serif;color:var(--ink);background:#fff;-webkit-font-smoothing:antialiased}
+header{background:radial-gradient(60% 120% at 30% 40%,#a8499a,#961982 55%,#80026e);color:#fff;padding:56px 24px 90px;position:relative;overflow:hidden}
+header::after{content:"";position:absolute;right:-120px;top:-60px;width:480px;height:480px;background:var(--mint);border-radius:44% 56% 52% 48%/50% 44% 56% 50%;opacity:.25}
+.wrap{max-width:1040px;margin:0 auto;position:relative;z-index:1}
+.eyebrow{text-transform:uppercase;letter-spacing:1.5px;font-size:13px;font-weight:800;opacity:.9}
+h1{font-size:clamp(32px,5vw,50px);font-weight:900;margin:8px 0 12px;line-height:1.08}
+header p{font-size:19px;line-height:1.55;max-width:640px;margin:0;opacity:.95}
+main{margin-top:-56px;padding:0 24px 60px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+.card{background:#fff;border-radius:24px;box-shadow:0 18px 44px rgba(40,10,40,.14);overflow:hidden;display:flex;flex-direction:column}
+.card-top{height:150px;display:grid;place-items:center;font-size:70px}
+.card-body{padding:22px 24px 24px;display:flex;flex-direction:column;flex:1}
+.tag{display:inline-block;background:var(--sky);color:#00528d;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:800;margin-bottom:10px;align-self:flex-start}
+h2{color:var(--zblue);font-size:26px;font-weight:900;margin:0 0 8px}
+.card p{font-size:16.5px;line-height:1.55;margin:0 0 14px}
+ul{margin:0 0 18px;padding-left:20px;line-height:1.6;font-size:15.5px}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto}
+a.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font-weight:800;text-decoration:none;font-size:16px;border:2px solid var(--purple)}
+a.primary{background:var(--purple);color:#fff}a.primary:hover{background:var(--purple-2)}
+a.ghost{color:var(--purple);background:#fff}a.ghost:hover{background:#fbf3fa}
+.note{margin-top:34px;background:#f6f6f6;border-radius:20px;padding:20px 24px;font-size:15.5px;line-height:1.6}
+.note h3{margin:0 0 6px;color:var(--zblue);font-size:18px}
+footer{text-align:center;color:var(--soft);font-size:14px;padding:0 24px 40px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="eyebrow">HBO-project · concept-uitbreiding voor Estafette</div>
+  <h1>Leestrainer-prototypes</h1>
+  <p>Twee klikbare prototypes die laten zien hoe de digitale leesmethode Estafette uitgebreid kan worden met woordenschat, ontdekken en leesmotivatie.</p>
+</div></header>
+<main><div class="wrap">
+  <div class="grid">
+    <article class="card">
+      <div class="card-top" style="background:linear-gradient(135deg,#D9F1FB,#A6DEC1)">🌍</div>
+      <div class="card-body">
+        <span class="tag">Woordenschat</span>
+        <h2>Leestrainer Wereldreis</h2>
+        <p>Leerlingen kiezen hun Estafette-leesboek en reizen langs bestemmingen op een draaibare wereldbol. Elk verhaal zit vol woorden om te ontdekken.</p>
+        <ul><li>Leesboeken per groep, AVI-niveau (M/E) en pakket A/B</li><li>Woorduitleg met beeld, uitspraak en lettergrepen</li><li>Leeractiviteit en stempel per verhaal</li></ul>
+        <div class="btns"><a class="btn primary" href="wereldreis/">▶ Open prototype</a><a class="btn ghost" href="https://github.com/Yusuf013/leestrainer-prototypes/blob/main/wereldreis/index.html">&lt;/&gt; Bekijk de code</a></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="card-top" style="background:linear-gradient(135deg,#f6e8f3,#D9F1FB)">🎧</div>
+      <div class="card-body">
+        <span class="tag">Leesmotivatie</span>
+        <h2>Lees &amp; Luister</h2>
+        <p>De leerling leest hardop en de software leest via de microfoon woord voor woord mee. Bij sleutelwoorden komt het verhaal tot leven met geluid en beeld.</p>
+        <ul><li>Meelezen met spraakherkenning (Chrome of Edge)</li><li>Geluiden en animaties precies op het juiste woord</li><li>Demo en doorklikken zonder microfoon</li></ul>
+        <div class="btns"><a class="btn primary" href="lees-en-luister/">▶ Open prototype</a><a class="btn ghost" href="https://github.com/Yusuf013/leestrainer-prototypes/blob/main/lees-en-luister/index.html">&lt;/&gt; Bekijk de code</a></div>
+      </div>
+    </article>
+  </div>
+  <div class="note">
+    <h3>Goed om te weten</h3>
+    De verhalen, titels en thema's zijn fictief. Alleen de opbouw (groepen, AVI-niveaus, pakket A/B) is afgeleid van Estafette editie 3. Dit is een studentenconcept en geen officieel product van Uitgeverij Zwijsen.
+    Gebruik voor Lees &amp; Luister Chrome of Edge en bij voorkeur een koptelefoon. De spraakherkenning van de browser verwerkt spraak via de servers van Google: vraag toestemming voordat je met leerlingen test.
+  </div>
+</div></main>
+<footer>Broncode: <a href="https://github.com/Yusuf013/leestrainer-prototypes" style="color:var(--purple);font-weight:800">github.com/Yusuf013/leestrainer-prototypes</a></footer>
+</body>
+</html>
