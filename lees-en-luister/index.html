@@ -83,8 +83,32 @@ h1,h2{color:var(--zblue);margin:0;line-height:1.1;font-weight:900}
 .w .ico{display:none;position:absolute;top:-.95em;left:50%;transform:translateX(-50%);font-size:.62em}
 .w.fired .ico{display:block;animation:popico .6s cubic-bezier(.2,1.6,.4,1)}
 @keyframes popico{from{transform:translateX(-50%) scale(0)}}
-.w.cue{text-decoration:underline dotted rgba(150,25,130,.0)}
-body.show-cues .w.cue{text-decoration-color:rgba(150,25,130,.6);text-underline-offset:6px}
+.w.cue{text-decoration:underline dotted transparent;text-underline-offset:6px;text-decoration-thickness:2px}
+body.preview-cues .w.cue{text-decoration-color:rgba(150,25,130,.55)}
+body.preview-cues .w.cue .ico{display:block;opacity:.45;filter:saturate(.6)}
+body.preview-cues .w.cue.fired .ico{opacity:1;filter:none}
+/* instellingen */
+.toggles{display:flex;gap:6px;flex-wrap:wrap}
+.tg{border:2px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-weight:800;font-size:13.5px;color:var(--ink-soft);white-space:nowrap}
+.tg:hover{border-color:var(--zblue)}
+.tg.on{background:var(--sky);border-color:var(--zblue);color:var(--zblue-2)}
+.choose{background:var(--sand);border-radius:16px;padding:12px 14px;margin:0 0 16px}
+.choose b{display:block;margin-bottom:8px;font-size:15px}
+.vol input:disabled{opacity:.35}
+/* woordmenu */
+.wordmenu{position:absolute;z-index:6;display:flex;gap:6px;background:#fff;border-radius:16px;padding:6px;box-shadow:0 10px 28px rgba(30,30,40,.22);animation:pop .18s ease-out}
+.wordmenu button{border:0;border-radius:999px;padding:9px 14px;font-weight:800;font-size:15px;background:var(--sand);white-space:nowrap}
+.wordmenu button:first-child{background:var(--purple);color:#fff}
+.wordmenu button:hover{filter:brightness(.95)}
+/* animaties uit */
+body.no-anim .scene-wrap{display:none}
+body.no-anim .text-card{margin-top:0}
+body.no-anim .fx,body.no-anim .flash{display:none}
+body.no-anim .rain{display:none}
+body.no-anim .scene-wrap svg *{transition:none!important}
+body.no-anim #okkiBody{animation:none!important}
+body.no-anim .w.stuck{animation:none;background:#fff0b3}
+body.no-anim .w.fired .ico{animation:none}
 
 .controls{flex:none;margin-top:12px;background:#fff;border-radius:22px;box-shadow:var(--shadow);padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .mic{width:62px;height:62px;border-radius:50%;border:0;background:var(--purple);color:#fff;font-size:26px;display:grid;place-items:center;flex:none;position:relative;box-shadow:0 6px 16px rgba(150,25,130,.35)}
@@ -211,9 +235,13 @@ select{font:inherit;font-weight:800;font-size:14px;border:2px solid var(--line);
     <button class="mic" id="micBtn" aria-label="Microfoon aan of uit" disabled>🎤</button>
     <div class="status"><b id="statusTitle">Microfoon wordt gecontroleerd…</b><small id="statusSub">&nbsp;</small><div class="prog"><i id="progBar"></i></div></div>
     <div class="ctl">
+      <div class="toggles" role="group" aria-label="Instellingen">
+        <button class="tg" data-setting="sound"></button><button class="tg" data-setting="anim"></button><button class="tg" data-setting="preview"></button>
+      </div>
+      <button class="btn small" id="prevSent" title="Ga terug naar het begin van de zin">⏮ Vorige zin</button>
       <button class="btn small" id="demoBtn">▶️ Demo</button>
       <select id="speedSel" aria-label="Leestempo van de demo"><option value="1.35">🐢 Rustig</option><option value="1" selected>🚶 Gemiddeld</option><option value=".72">🐇 Vlot</option></select>
-      <label class="vol" title="Volume van de geluiden">🔊<input type="range" id="vol" min="0" max="1" step=".05" value=".7"></label>
+      <label class="vol" title="Volume van de geluiden">🔈<input type="range" id="vol" min="0" max="1" step=".05" value=".7"></label>
     </div>
   </div>
 </div>
@@ -224,7 +252,9 @@ select{font:inherit;font-weight:800;font-size:14px;border:2px solid var(--line);
     <div class="card-body">
       <p>Lees het verhaal hardop voor. De computer luistert mee en weet precies waar je bent. Lees je over apen? Dan hoor je ze ook. Begint het te regenen? Dan regent het om je heen!</p>
       <div class="steps"><div class="step"><span>🎤</span>Druk op de microfoon</div><div class="step"><span>📖</span>Lees hardop</div><div class="step"><span>🐒</span>Hoor het verhaal tot leven komen</div></div>
-      <div class="tip">🎧 <span>Tip: gebruik een koptelefoon. Dan hoort de microfoon alleen jouw stem, en niet de geluiden.</span></div>
+      <div class="choose"><b>Kies zelf hoe je wilt lezen</b><div class="toggles">
+        <button class="tg" data-setting="sound"></button><button class="tg" data-setting="anim"></button><button class="tg" data-setting="preview"></button></div></div>
+      <div class="tip">🎧 <span>Tip: gebruik een koptelefoon. Dan hoort de microfoon alleen jouw stem, en niet de geluiden. Wil je ergens opnieuw beginnen? Tik op een woord en kies <b>Lees vanaf hier</b>.</span></div>
       <div class="tip warn hidden" id="micWarn"></div>
       <div class="btn-row">
         <button class="btn primary" id="startMic" disabled>🎤 Ik ga zelf lezen</button>
@@ -307,11 +337,12 @@ const Snd={
   init(){
     if(this.ctx){ if(this.ctx.state==='suspended') this.ctx.resume(); return; }
     const C=window.AudioContext||window.webkitAudioContext; if(!C) return;
-    this.ctx=new C(); this.master=this.ctx.createGain(); this.master.gain.value=this.vol; this.master.connect(this.ctx.destination);
+    this.ctx=new C(); this.master=this.ctx.createGain(); this.master.gain.value=SET.sound?this.vol:0; this.master.connect(this.ctx.destination);
     const len=this.ctx.sampleRate*2, b=this.ctx.createBuffer(1,len,this.ctx.sampleRate), d=b.getChannelData(0);
     for(let i=0;i<len;i++) d[i]=Math.random()*2-1; this.noise=b;
   },
-  setVol(v){ this.vol=v; if(this.master) this.master.gain.setTargetAtTime(v,this.ctx.currentTime,.05); },
+  setVol(v){ this.vol=v; this.applyVol(); },
+  applyVol(){ if(this.master) this.master.gain.setTargetAtTime(SET.sound?this.vol:0,this.ctx.currentTime,.08); },
   t(){ return this.ctx.currentTime; },
   ns(){ const s=this.ctx.createBufferSource(); s.buffer=this.noise; s.loop=true; s.loopStart=Math.random(); return s; },
   out(node,pan=0){ if(this.ctx.createStereoPanner){ const p=this.ctx.createStereoPanner(); p.pan.value=pan; node.connect(p); p.connect(this.master); } else node.connect(this.master); },
@@ -391,31 +422,63 @@ const Snd={
 const scene=document.getElementById('scene'), fx=document.getElementById('fx');
 function setMode(m){ scene.classList.remove('m-start','m-water','m-jungle','m-end'); scene.classList.add('m-'+m);
   document.getElementById('frontWave').style.opacity = m==='water'?'.9':'0'; }
-function spawn(txt,cls,style,ms=3500){ const s=document.createElement('span'); s.textContent=txt; s.className=cls; Object.assign(s.style,style); fx.appendChild(s); setTimeout(()=>s.remove(),ms); return s; }
-function bubble(txt,x,y){ const b=document.createElement('div'); b.className='bubble'; b.textContent=txt; b.style.left=x; b.style.top=y; fx.appendChild(b); setTimeout(()=>b.remove(),1900); }
+function spawn(txt,cls,style,ms=3500){ if(!SET.anim) return null; const s=document.createElement('span'); s.textContent=txt; s.className=cls; Object.assign(s.style,style); fx.appendChild(s); setTimeout(()=>s.remove(),ms); return s; }
+function bubble(txt,x,y){ if(!SET.anim) return; const b=document.createElement('div'); b.className='bubble'; b.textContent=txt; b.style.left=x; b.style.top=y; fx.appendChild(b); setTimeout(()=>b.remove(),1900); }
+function shakeOkki(){ if(!SET.anim) return; const o=document.getElementById('okkiBody'); o.classList.remove('shake'); void o.getBoundingClientRect(); o.classList.add('shake'); }
+function flash(){ if(!SET.anim) return; const f=document.getElementById('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+
+/* De "wereld" (welk decor, welke achtergrondgeluiden) volgt uit alle cues vóór een positie.
+   Daardoor klopt alles weer als je terugspringt in de tekst. */
+const WORLD0=()=>({mode:'start',storm:false,loops:{river:.18}});
+const REDUCE={
+  river:w=>{ w.loops.river=.4; },
+  splash:w=>{ w.mode='water'; },
+  jungle:w=>{ w.mode='jungle'; w.loops.jungle=.35; w.loops.river=.08; },
+  rain:w=>{ w.storm=true; w.loops.rain=.42; w.loops.jungle=.15; },
+  frogs:w=>{ w.loops.frogs=1; },
+  rainstop:w=>{ w.storm=false; delete w.loops.rain; },
+  riverback:w=>{ w.mode='end'; w.loops.river=.35; w.loops.jungle=.18; delete w.loops.frogs; }
+};
+function worldAt(p){ const w=WORLD0(); for(let i=0;i<p&&i<TOK.length;i++) TOK[i].cues.forEach(c=>REDUCE[c]&&REDUCE[c](w)); return w; }
+function syncWorld(){ const w=S.world; setMode(w.mode); scene.classList.toggle('storm',w.storm); scene.classList.toggle('raining',w.storm);
+  if(Snd.ctx) ['river','jungle','rain','frogs'].forEach(n=> w.loops[n] ? Snd.loop(n,true,w.loops[n]) : Snd.loop(n,false)); }
+
+/* Eenmalige effecten: geluid + animatie op het moment dat het woord gelezen wordt */
 const SCENE={
-  river:()=>{ Snd.loop('river',true,.4); bubble('Klots, klots…','62%','12%'); },
-  splash:()=>{ Snd.splash(); setMode('water'); bubble('PLONS!','40%','30%'); for(let i=0;i<6;i++) spawn('💧','a-pop',{left:(38+Math.random()*14)+'%',top:(48+Math.random()*20)+'%',fontSize:'34px',animationDelay:(i*.08)+'s'},2200); },
-  jungle:()=>{ setMode('jungle'); Snd.loop('jungle',true); Snd.loop('river',true,.08); },
+  river:()=>{ bubble('Klots, klots…','62%','12%'); },
+  splash:()=>{ Snd.splash(); bubble('PLONS!','40%','30%'); for(let i=0;i<6;i++) spawn('💧','a-pop',{left:(38+Math.random()*14)+'%',top:(48+Math.random()*20)+'%',fontSize:'34px',animationDelay:(i*.08)+'s'},2200); },
   birds:()=>{ Snd.birds(); ['🐦','🐦','🐤'].forEach((e,i)=>spawn(e,'a-fly',{top:(10+i*9)+'%',left:'0',fontSize:'34px',animationDelay:(i*.45)+'s'},4800)); },
   monkeys:()=>{ Snd.monkeys(); spawn('🐒','a-swing',{top:'8%',left:'0',fontSize:'60px'},3300); spawn('🐒','a-swing',{top:'2%',left:'0',fontSize:'46px',animationDelay:'.9s'},4300); bubble('Oe oe, aa aa!','58%','8%'); },
   crack:()=>{ Snd.crack(); bubble('KRAK!','30%','46%'); },
   parrot:()=>{ Snd.parrot(); spawn('🦜','a-flyr',{top:'14%',left:'0',fontSize:'58px'},3200); },
-  rain:()=>{ scene.classList.add('storm','raining'); Snd.loop('rain',true); Snd.loop('jungle',true,.15); },
-  thunder:()=>{ Snd.thunder(); const f=document.getElementById('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); bubble('BOEM!','58%','18%'); },
-  trumpet:()=>{ Snd.trumpet(); const o=document.getElementById('okkiBody'); o.classList.remove('shake'); void o.getBoundingClientRect(); o.classList.add('shake'); bubble('TOETER!','36%','30%'); },
-  frogs:()=>{ Snd.loop('frogs',true); for(let i=0;i<4;i++) spawn('🐸','a-hop',{left:(52+i*9)+'%',bottom:'6%',fontSize:'38px',animationDelay:(i*.35)+'s'},4200); bubble('Kwaak kwaak!','66%','40%'); },
-  rainstop:()=>{ scene.classList.remove('storm','raining'); Snd.loop('rain',false); },
-  riverback:()=>{ setMode('end'); Snd.loop('river',true,.35); Snd.loop('jungle',true,.18); setTimeout(()=>Snd.loop('frogs',false),2500); },
+  thunder:()=>{ Snd.thunder(); flash(); bubble('BOEM!','58%','18%'); },
+  trumpet:()=>{ Snd.trumpet(); shakeOkki(); bubble('TOETER!','36%','30%'); },
+  frogs:()=>{ for(let i=0;i<4;i++) spawn('🐸','a-hop',{left:(52+i*9)+'%',bottom:'6%',fontSize:'38px',animationDelay:(i*.35)+'s'},4200); bubble('Kwaak kwaak!','66%','40%'); },
   horn:()=>{ Snd.horn(); bubble('TOEEET!','70%','18%'); },
-  happy:()=>{ Snd.trumpet(); Snd.happy(); const o=document.getElementById('okkiBody'); o.classList.remove('shake'); void o.getBoundingClientRect(); o.classList.add('shake');
+  happy:()=>{ Snd.trumpet(); Snd.happy(); shakeOkki();
     for(let i=0;i<22;i++) spawn(['🎉','✨','⭐','🎊'][i%4],'a-confetti',{left:(Math.random()*96)+'%',top:'-8%',fontSize:(22+Math.random()*20)+'px',animationDelay:(Math.random()*.8)+'s'},3600); }
 };
+
+/* ---------- instellingen (kind kiest zelf) ---------- */
+const SET={sound:true,anim:true,preview:false};
+try{ Object.assign(SET,JSON.parse(localStorage.getItem('ll-settings')||'{}')); }catch(e){}
+if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches && !localStorage.getItem('ll-settings')) SET.anim=false;
+const SET_LABEL={ sound:['🔊 Geluid aan','🔇 Geluid uit'], anim:['🖼️ Plaatjes aan','📄 Alleen tekst'], preview:['👀 Icoontjes vooraf aan','🙈 Icoontjes vooraf uit'] };
+const SET_TIP={ sound:'Zet alle geluiden aan of uit', anim:'Laat het plaatje zien, of lees alleen de tekst', preview:'Laat vooraf zien bij welke woorden iets gebeurt' };
+function applySettings(){
+  document.body.classList.toggle('no-anim',!SET.anim); document.body.classList.toggle('preview-cues',SET.preview);
+  document.querySelectorAll('[data-setting]').forEach(b=>{ const k=b.dataset.setting, on=!!SET[k]; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); b.textContent=SET_LABEL[k][on?0:1]; b.title=SET_TIP[k]; });
+  const v=document.getElementById('vol'); if(v) v.disabled=!SET.sound;
+  Snd.applyVol(); if(!SET.anim) fx.innerHTML='';
+  try{ localStorage.setItem('ll-settings',JSON.stringify(SET)); }catch(e){}
+}
+function toggleSetting(k){ SET[k]=!SET[k]; if(k==='sound') Snd.init(); applySettings();
+  toast({sound:SET.sound?'🔊 De geluiden staan aan.':'🔇 De geluiden staan uit. Je leest in stilte.',anim:SET.anim?'🖼️ De plaatjes staan aan.':'📄 Je ziet nu alleen de tekst, zonder plaatjes.',preview:SET.preview?'👀 Je ziet nu vooraf bij welke woorden iets gebeurt.':'🙈 Verrassing! De icoontjes verschijnen pas als je het woord leest.'}[k]); }
 
 /* ================================================================
    MEELEZEN – positie bijhouden op basis van herkende woorden
    ================================================================ */
-const S={ pos:0, phraseStart:0, mode:null, fired:new Set(), startTime:0, endTime:0, lastMove:0, demoTimer:null, stuckTimer:null };
+const S={ pos:0, phraseStart:0, mode:null, fired:new Set(), startTime:0, endTime:0, lastMove:0, demoTimer:null, stuckTimer:null, world:WORLD0(), skipWords:0, partialCount:0 };
 const $=id=>document.getElementById(id);
 
 function lev(a,b){ if(a===b) return 0; const m=a.length,n=b.length; if(!m||!n) return m||n; let prev=Array.from({length:n+1},(_,j)=>j);
@@ -449,13 +512,38 @@ function setPos(p,{silent=false}={}){
   if(p>=TOK.length && !S.endTime){ S.endTime=performance.now(); setTimeout(finish,2600); }
 }
 function scrollToWord(el){ const card=$('textCard'); const top=el.offsetTop - card.clientHeight*.38; if(Math.abs(card.scrollTop-top)>card.clientHeight*.18) card.scrollTop=Math.max(0,top); }
-function fire(c,i){ if(S.fired.has(c+'@'+i)) return; S.fired.add(c+'@'+i); TOK[i].el.classList.add('fired'); try{ SCENE[c]&&SCENE[c](); }catch(e){ console.warn(e); } }
+function fire(c,i){ if(S.fired.has(c+'@'+i)) return; S.fired.add(c+'@'+i); TOK[i].el.classList.add('fired');
+  if(REDUCE[c]){ REDUCE[c](S.world); syncWorld(); } try{ SCENE[c]&&SCENE[c](); }catch(e){ console.warn(e); } }
 
-function onWordClick(i){
-  if(S.mode==='mic'){ speakWord(TOK[i].text); return; }
-  Snd.init(); if(!S.mode) beginMode('manual');
-  setPos(i+1); S.phraseStart=S.pos;
+function onWordClick(i){ openWordMenu(i); }
+function openWordMenu(i){
+  closeWordMenu(); const el=TOK[i].el, card=$('textCard'), m=document.createElement('div');
+  m.className='wordmenu'; m.id='wordMenu';
+  m.innerHTML='<button data-a="here">▶ Lees vanaf hier</button><button data-a="say">🔊 Hoor dit woord</button>';
+  card.appendChild(m);
+  m.style.top=(el.offsetTop+el.offsetHeight+6)+'px';
+  m.style.left=Math.max(8,Math.min(el.offsetLeft-10,card.clientWidth-m.offsetWidth-8))+'px';
+  m.querySelector('[data-a=here]').onclick=()=>{ if(!S.mode) beginMode('manual'); jumpTo(i); };
+  m.querySelector('[data-a=say]').onclick=()=>{ speakWord(TOK[i].text); closeWordMenu(); };
+  m.querySelector('button').focus({preventScroll:true});
 }
+function closeWordMenu(){ const m=$('wordMenu'); if(m) m.remove(); }
+/* Springen naar een plek: decor en achtergrondgeluid worden opnieuw opgebouwd,
+   en alle geluidsmomenten vanaf die plek kunnen opnieuw afgaan. */
+function jumpTo(p){
+  closeWordMenu(); Snd.init(); p=Math.max(0,Math.min(TOK.length-1,p));
+  if(S.endTime){ S.endTime=0; hideModal('endModal'); }
+  const keep=new Set();
+  TOK.forEach((t,i)=>{ t.el.classList.toggle('read',i<p); t.el.classList.remove('cur','stuck'); const f=i<p&&t.cues.length>0; t.el.classList.toggle('fired',f); if(f) t.cues.forEach(c=>keep.add(c+'@'+i)); });
+  S.fired=keep; S.world=worldAt(p); fx.innerHTML=''; syncWorld();
+  S.pos=p; S.phraseStart=p; S.skipWords=S.partialCount; S.lastMove=performance.now(); if(!S.startTime) S.startTime=performance.now();
+  TOK[p].el.classList.add('cur'); scrollToWord(TOK[p].el); $('progBar').style.width=(p/TOK.length*100)+'%';
+  toast('⏪ Je leest verder vanaf “'+TOK[p].text.replace(/[‘’,.!?:]/g,'')+'”');
+  if(S.mode==='demo' && S.demoTimer){ clearTimeout(S.demoTimer); S.demoTimer=setTimeout(demoStep,900); }
+}
+function sentenceStart(si){ return TOK.findIndex(t=>t.si===si); }
+function prevSentence(){ const p=Math.min(S.pos,TOK.length-1); let si=TOK[p].si, st=sentenceStart(si);
+  if(S.pos-st<=1 && si>0) st=sentenceStart(si-1); jumpTo(st); }
 function speakWord(w){ if(!('speechSynthesis' in window)) return; speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(w.replace(/[‘’!?,.:]/g,'')); u.lang='nl-NL'; u.rate=.75;
   const v=speechSynthesis.getVoices().find(v=>/^nl/i.test(v.lang)); if(v) u.voice=v; speechSynthesis.speak(u); }
 
@@ -488,7 +576,9 @@ const Rec={ kind:null, d:null, sr:null, want:false,
 };
 let lastHeard='';
 function hear(text,final){
-  const words=toWords(text); if(!words.length && !final) return;
+  const all=toWords(text); S.partialCount=final?0:all.length;
+  const words=S.skipWords?all.slice(S.skipWords):all; if(final) S.skipWords=0;
+  if(!words.length && !final) return;
   const p=align(S.phraseStart,words); if(p>S.pos) setPos(p);
   if(final) S.phraseStart=S.pos;
   lastHeard=text.trim(); if(lastHeard) $('statusSub').textContent='Ik hoor: “'+lastHeard.split(/\s+/).slice(-8).join(' ')+'”';
@@ -528,10 +618,11 @@ function beginMode(m){
 function resetStory(){
   stopDemo(); if(Rec.active()) Rec.stop(); stopStuckWatch(); Snd.stopAll();
   S.fired.clear(); S.startTime=0; S.endTime=0; S.phraseStart=0;
+  S.skipWords=0; S.partialCount=0; closeWordMenu();
   TOK.forEach(t=>t.el.classList.remove('read','cur','fired','stuck')); S.pos=-1; setPos(0,{silent:true});
-  scene.classList.remove('storm','raining'); setMode('start'); fx.innerHTML=''; $('textCard').scrollTop=0;
+  S.world=WORLD0(); fx.innerHTML=''; syncWorld(); $('textCard').scrollTop=0;
 }
-function ambienceStart(){ Snd.init(); Snd.loop('river',true,.18); }
+function ambienceStart(){ Snd.init(); syncWorld(); }
 function startMic(){ // vanuit klik, synchroon
   if(!Rec.kind) return;
   ambienceStart(); hideModal('startModal'); beginMode('mic'); Rec.start();
@@ -554,7 +645,7 @@ let tt; function toast(m){ let t=document.querySelector('.toast'); if(!t){ t=doc
 $('micBtn').onclick=()=>{ if(S.mode!=='mic'){ ambienceStart(); beginMode('mic'); }
   if(Rec.active()) { Rec.stop(); } else { Snd.init(); Rec.start(); } };
 $('startMic').onclick=startMic; $('startDemo').onclick=startDemo; $('startManual').onclick=startManual;
-$('demoBtn').onclick=()=>{ Snd.init(); if(S.mode==='demo' && S.demoTimer){ stopDemo(); return; } if(S.pos>=TOK.length) resetStory(); if(!S.fired.size && S.pos===0) Snd.loop('river',true,.18);
+$('demoBtn').onclick=()=>{ Snd.init(); if(S.mode==='demo' && S.demoTimer){ stopDemo(); return; } if(S.pos>=TOK.length) resetStory(); syncWorld();
   hideModal('startModal'); beginMode('demo'); $('demoBtn').innerHTML='⏸ Pauze'; setStatus('Demo: zo leest een kind mee','De computer doet alsof iemand hardop leest.'); demoStep(); };
 $('vol').oninput=e=>Snd.setVol(parseFloat(e.target.value));
 $('again').onclick=()=>{ hideModal('endModal'); resetStory(); showModal('startModal'); };
@@ -564,10 +655,15 @@ $('infoTop').onclick=()=>{ hideModal('endModal'); if(S.mode==='demo') stopDemo()
 document.addEventListener('keydown',e=>{
   if(!$('startModal').classList.contains('hidden') || !$('endModal').classList.contains('hidden')) return;
   if(e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); Snd.init(); if(S.mode!=='manual') beginMode('manual'); setPos(S.pos+1); S.phraseStart=S.pos; }
-  if(e.key==='ArrowLeft'){ e.preventDefault(); if(S.mode!=='manual') beginMode('manual'); setPos(S.pos-1,{silent:true}); S.phraseStart=S.pos; }
+  if(e.key==='ArrowLeft'){ e.preventDefault(); if(S.mode!=='manual') beginMode('manual'); jumpTo(S.pos-1); }
+  if(e.key==='Escape') closeWordMenu();
 });
+document.addEventListener('click',e=>{ if(!e.target.closest('.wordmenu') && !e.target.closest('.w')) closeWordMenu(); });
+document.querySelectorAll('[data-setting]').forEach(b=>b.addEventListener('click',()=>toggleSetting(b.dataset.setting)));
+$('prevSent').onclick=()=>{ if(!S.mode) beginMode('manual'); prevSentence(); };
 
 /* ---------- init ---------- */
+applySettings();
 buildText(); S.pos=-1; setPos(0,{silent:true});
 setStatus('Microfoon wordt gecontroleerd…','');
 Rec.detect().then(()=>{

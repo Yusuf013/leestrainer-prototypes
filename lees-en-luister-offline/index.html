@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lees & Luister – offline spraakherkenning</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --purple:#961982; --purple-2:#7c1269; --zblue:#0069B4; --zblue-2:#00528d; --sky:#D9F1FB; --mint:#A6DEC1; --lime:#93D00F; --orange:#EB5A0A;
+  --ink:#2f2f36; --ink-soft:#6a6a72; --line:#E3E3E3; --sand:#F6F6F6; --rs:27px;
+  --shadow:0 10px 30px rgba(30,30,40,.08),0 2px 6px rgba(30,30,40,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#f3f7fa;-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid #f0a945;outline-offset:2px}
+h1,h2{color:var(--zblue);margin:0;line-height:1.1;font-weight:900}
+.hidden{display:none!important}
+
+.topbar{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:var(--purple);color:#fff}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-logo{width:42px;height:42px;border-radius:13px;background:#fff;display:grid;place-items:center;font-size:22px}
+.brand-title{font-weight:900;font-size:20px;line-height:1}
+.brand-sub{font-size:12.5px;font-weight:700;opacity:.85}
+.top-actions{display:flex;gap:8px}
+.pill{border:0;background:#fff;color:var(--purple);border-radius:999px;padding:8px 14px;font-weight:800;font-size:14px}
+.pill:hover{background:#fbf3fa}
+
+.stage{height:calc(100vh - 68px);display:flex;flex-direction:column;max-width:1120px;margin:0 auto;padding:14px 18px 14px}
+.scene-wrap{position:relative;flex:none;height:clamp(200px,40vh,430px);border-radius:28px;overflow:hidden;box-shadow:var(--shadow);background:#bfe3f2}
+.scene-wrap svg{width:100%;height:100%;display:block}
+.scene-wrap svg *{transition:opacity 1.2s ease, transform 1.6s cubic-bezier(.4,0,.2,1), fill 1.5s}
+#layRiver,#layJungle,#boat,#okki,#frontWave,#stormSky{transform-box:view-box}
+.m-start #layJungle,.m-water #layJungle{opacity:0}
+.m-jungle #layRiver{opacity:0}
+.m-end #layJungle{opacity:.55}
+#boat{transform:translate(560px,0)}
+.m-water #boat,.m-jungle #boat{transform:translate(1250px,0)}
+.m-end #boat{transform:translate(650px,0)}
+#okki{transform:translate(640px,262px) scale(.62)}
+.m-water #okki{transform:translate(430px,338px) scale(.7)}
+.m-jungle #okki{transform:translate(360px,322px) scale(.85)}
+.m-end #okki{transform:translate(470px,300px) scale(.75)}
+#okkiBody.shake{animation:shake .45s 3}
+@keyframes shake{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+#stormSky{opacity:0}
+.storm #stormSky{opacity:.75}
+.rain{position:absolute;inset:-40px;pointer-events:none;opacity:0;transition:opacity 1.5s;
+  background-image:repeating-linear-gradient(105deg,rgba(255,255,255,.0) 0 14px,rgba(220,235,255,.55) 14px 15px,rgba(255,255,255,0) 15px 34px);
+  background-size:200px 200px;animation:rain .35s linear infinite}
+.raining .rain{opacity:1}
+@keyframes rain{to{background-position:-60px 200px}}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.flash.go{animation:flash 1s}
+@keyframes flash{0%,100%{opacity:0}8%{opacity:.85}16%{opacity:.1}24%{opacity:.6}40%{opacity:0}}
+.fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.fx span{position:absolute;line-height:1;filter:drop-shadow(0 4px 6px rgba(0,0,0,.25))}
+.bubble{position:absolute;background:#fff;color:var(--purple);font-weight:900;border-radius:16px;padding:6px 14px;font-size:clamp(18px,2.6vw,30px);box-shadow:0 6px 16px rgba(0,0,0,.2);animation:bub 1.8s forwards;letter-spacing:1px}
+@keyframes bub{0%{transform:scale(.3) rotate(-10deg);opacity:0}15%{transform:scale(1.1) rotate(-4deg);opacity:1}25%{transform:scale(1) rotate(-4deg)}80%{opacity:1}100%{opacity:0;transform:translateY(-20px) rotate(-4deg)}}
+.a-swing{animation:swing 3s ease-in-out forwards}
+@keyframes swing{0%{transform:translate(-80px,-60px) rotate(-30deg);opacity:0}15%{opacity:1}50%{transform:translate(40vw,10px) rotate(20deg)}100%{transform:translate(85vw,-80px) rotate(-20deg);opacity:0}}
+.a-fly{animation:fly 3.4s linear forwards}
+@keyframes fly{0%{transform:translate(105vw,0) scaleX(1)}25%{transform:translate(75vw,-30px)}50%{transform:translate(45vw,10px)}75%{transform:translate(20vw,-25px)}100%{transform:translate(-120px,5px);}}
+.a-flyr{animation:flyr 3s linear forwards}
+@keyframes flyr{0%{transform:translate(-80px,0)}50%{transform:translate(50vw,-40px)}100%{transform:translate(110vw,-10px)}}
+.a-hop{animation:hop 2.6s ease-in-out forwards}
+@keyframes hop{0%{transform:translateY(40px);opacity:0}15%{transform:translateY(0);opacity:1}30%{transform:translate(20px,-40px)}45%{transform:translate(40px,0)}60%{transform:translate(60px,-35px)}75%{transform:translate(80px,0);opacity:1}100%{transform:translate(90px,10px);opacity:0}}
+.a-pop{animation:popfx 1.6s ease-out forwards}
+@keyframes popfx{0%{transform:scale(.2);opacity:0}25%{transform:scale(1.2);opacity:1}100%{transform:scale(1) translateY(-30px);opacity:0}}
+.a-confetti{animation:conf 2.6s ease-in forwards}
+@keyframes conf{0%{transform:translateY(-40px) rotate(0);opacity:1}100%{transform:translateY(110%) rotate(540deg);opacity:0}}
+
+.text-card{position:relative;flex:1;min-height:0;margin-top:-14px;background:#fff;border-radius:26px;box-shadow:var(--shadow);overflow:auto;padding:36px clamp(20px,5vw,64px) 30px;scroll-behavior:smooth}
+.story-title{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:var(--purple);margin-bottom:8px}
+.text{font-size:var(--rs);line-height:1.95;max-width:30em}
+.w{position:relative;color:#8a8a96;border-radius:8px;padding:1px 3px;margin:0 -1px;transition:color .25s,background .25s,box-shadow .25s;cursor:pointer}
+.w.read{color:var(--ink)}
+.w.cur{color:var(--zblue-2);background:var(--sky);box-shadow:inset 0 -4px 0 var(--purple)}
+.w.stuck{animation:stuck 1s ease-in-out infinite}
+@keyframes stuck{50%{background:#fff0b3}}
+.w .ico{display:none;position:absolute;top:-.95em;left:50%;transform:translateX(-50%);font-size:.62em}
+.w.fired .ico{display:block;animation:popico .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes popico{from{transform:translateX(-50%) scale(0)}}
+.w.cue{text-decoration:underline dotted transparent;text-underline-offset:6px;text-decoration-thickness:2px}
+body.preview-cues .w.cue{text-decoration-color:rgba(150,25,130,.55)}
+body.preview-cues .w.cue .ico{display:block;opacity:.45;filter:saturate(.6)}
+body.preview-cues .w.cue.fired .ico{opacity:1;filter:none}
+/* instellingen */
+.toggles{display:flex;gap:6px;flex-wrap:wrap}
+.tg{border:2px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-weight:800;font-size:13.5px;color:var(--ink-soft);white-space:nowrap}
+.tg:hover{border-color:var(--zblue)}
+.tg.on{background:var(--sky);border-color:var(--zblue);color:var(--zblue-2)}
+.choose{background:var(--sand);border-radius:16px;padding:12px 14px;margin:0 0 16px}
+.choose b{display:block;margin-bottom:8px;font-size:15px}
+.vol input:disabled{opacity:.35}
+/* woordmenu */
+.wordmenu{position:absolute;z-index:6;display:flex;gap:6px;background:#fff;border-radius:16px;padding:6px;box-shadow:0 10px 28px rgba(30,30,40,.22);animation:pop .18s ease-out}
+.wordmenu button{border:0;border-radius:999px;padding:9px 14px;font-weight:800;font-size:15px;background:var(--sand);white-space:nowrap}
+.wordmenu button:first-child{background:var(--purple);color:#fff}
+.wordmenu button:hover{filter:brightness(.95)}
+/* animaties uit */
+body.no-anim .scene-wrap{display:none}
+body.no-anim .text-card{margin-top:0}
+body.no-anim .fx,body.no-anim .flash{display:none}
+body.no-anim .rain{display:none}
+body.no-anim .scene-wrap svg *{transition:none!important}
+body.no-anim #okkiBody{animation:none!important}
+body.no-anim .w.stuck{animation:none;background:#fff0b3}
+body.no-anim .w.fired .ico{animation:none}
+
+.controls{flex:none;margin-top:12px;background:#fff;border-radius:22px;box-shadow:var(--shadow);padding:10px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.mic{width:62px;height:62px;border-radius:50%;border:0;background:var(--purple);color:#fff;font-size:26px;display:grid;place-items:center;flex:none;position:relative;box-shadow:0 6px 16px rgba(150,25,130,.35)}
+.mic:hover{background:var(--purple-2)}
+.mic[disabled]{background:#c9c9cf;box-shadow:none;cursor:not-allowed}
+.mic.on::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid var(--purple);animation:ring 1.4s ease-out infinite}
+@keyframes ring{from{transform:scale(.9);opacity:1}to{transform:scale(1.3);opacity:0}}
+.status{flex:1;min-width:200px}
+.lvl{width:10px;height:54px;border-radius:99px;background:var(--sand);position:relative;overflow:hidden;flex:none;--lv:0}
+.lvl i{position:absolute;left:0;right:0;bottom:0;height:calc(var(--lv)*100%);background:var(--lime);transition:height .08s}
+.model-box{background:#eef6fb;border-radius:14px;padding:12px 14px;margin:0 0 16px;font-size:14.5px;line-height:1.5;font-weight:700;color:#00528d}
+.model-box input{font:inherit;font-size:13px;margin-top:6px;max-width:100%}
+.lat{display:inline-block;margin-left:6px;background:var(--sky);color:#00528d;border-radius:999px;padding:0 8px;font-size:12px}
+.status b{display:block;font-size:16px}
+.status small{display:block;color:var(--ink-soft);font-size:13.5px;font-weight:700;min-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46ch}
+.prog{height:8px;border-radius:99px;background:var(--sand);overflow:hidden;margin-top:6px}
+.prog i{display:block;height:100%;width:0;background:var(--lime);transition:width .3s}
+.ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:999px;border:2px solid var(--purple);background:#fff;color:var(--purple);font-weight:800;padding:9px 16px;font-size:15px}
+.btn:hover{background:#fbf3fa}
+.btn.primary{background:var(--purple);color:#fff}
+.btn.primary:hover{background:var(--purple-2)}
+.btn.small{padding:6px 12px;font-size:13.5px;border-width:2px}
+.vol{display:flex;align-items:center;gap:6px;font-size:18px}
+.vol input{width:90px;accent-color:var(--purple)}
+select{font:inherit;font-weight:800;font-size:14px;border:2px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff;color:var(--ink)}
+
+.modal{position:fixed;inset:68px 0 0 0;background:rgba(40,10,40,.45);display:grid;place-items:center;padding:18px;z-index:20;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.card{background:#fff;border-radius:28px;max-width:640px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.3);overflow:hidden;animation:pop .3s cubic-bezier(.2,1.4,.4,1);max-height:100%;overflow:auto}
+@keyframes pop{from{transform:scale(.92);opacity:0}}
+.card-top{background:var(--sky);padding:22px 28px 18px;display:flex;gap:16px;align-items:center}
+.card-top .big{font-size:64px;line-height:1}
+.eyebrow{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:var(--purple)}
+.card h1{font-size:34px;margin-top:4px}
+.card-body{padding:22px 28px 26px}
+.card-body p{font-size:17px;line-height:1.55;margin:0 0 16px;color:var(--ink)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 16px}
+.step{background:var(--sand);border-radius:16px;padding:12px;text-align:center;font-weight:800;font-size:14.5px}
+.step span{display:block;font-size:30px;margin-bottom:4px}
+.tip{display:flex;gap:10px;align-items:flex-start;background:#eef8dc;color:#2f6a0d;border-radius:14px;padding:10px 14px;font-weight:700;font-size:15px;margin-bottom:18px}
+.warn{background:#fdeee4;color:#a3420a}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-row .btn{padding:12px 20px;font-size:16.5px}
+.linkish{background:none;border:0;color:var(--ink-soft);font-weight:800;text-decoration:underline;padding:8px 4px;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--sand);border-radius:16px;padding:12px;text-align:center}
+.stat b{display:block;font-size:26px;color:var(--zblue);font-weight:900}
+.stat span{font-size:13px;font-weight:800;color:var(--ink-soft)}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 18px}
+.badge{display:flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;background:var(--sky);font-weight:800;font-size:14px}
+.badge.miss{background:var(--sand);opacity:.5}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#2f2f36;color:#fff;border-radius:14px;padding:12px 18px;font-weight:700;z-index:40;max-width:92vw;box-shadow:var(--shadow)}
+.hint-row{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-soft);font-weight:700}
+.hint-row input{accent-color:var(--purple)}
+
+@media (max-width:760px){
+  :root{--rs:22px}
+  .brand-sub{display:none}
+  .steps{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr 1fr}
+  .vol input{width:70px}
+  .scene-wrap{height:clamp(170px,30vh,300px)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="brand-logo">🎧</div><div><div class="brand-title">Lees & Luister</div><div class="brand-sub">Testversie · spraakherkenning in de browser (Vosk)</div></div></div>
+  <div class="top-actions"><button class="pill" id="restartTop">↺ Opnieuw</button><button class="pill" id="infoTop">❓ Uitleg</button></div>
+</header>
+
+<div class="stage">
+  <div class="scene-wrap m-start" id="scene">
+    <svg viewBox="0 0 1000 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd0ee"/><stop offset="1" stop-color="#e5f6fb"/></linearGradient>
+        <linearGradient id="storm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b4660"/><stop offset="1" stop-color="#8a96a8"/></linearGradient>
+        <linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5aa9c9"/><stop offset="1" stop-color="#2f7ea3"/></linearGradient>
+      </defs>
+      <rect width="1000" height="420" fill="url(#sky)"/>
+      <circle cx="830" cy="80" r="44" fill="#fff6cf"/>
+      <rect id="stormSky" width="1000" height="420" fill="url(#storm)"/>
+      <path d="M0 250 Q80 170 170 210 T340 190 T520 205 T700 180 T880 200 T1000 185 V420 H0Z" fill="#4f9a5e"/>
+      <path d="M0 270 Q120 220 240 250 T480 240 T720 255 T1000 240 V420 H0Z" fill="#3f8a4f"/>
+      <g id="layRiver">
+        <path d="M0 300 Q250 285 500 300 T1000 296 V420 H0Z" fill="url(#water)"/>
+        <path d="M60 330 q30 -8 60 0 M300 360 q30 -8 60 0 M620 340 q30 -8 60 0 M820 380 q30 -8 60 0" stroke="#b8e2f2" stroke-width="4" fill="none" stroke-linecap="round"/>
+      </g>
+      <g id="boat">
+        <path d="M-10 300 L230 300 L200 345 L20 345Z" fill="#8a5a36"/>
+        <rect x="20" y="300" width="190" height="10" fill="#a8744a"/>
+        <rect x="140" y="250" width="56" height="50" rx="6" fill="#f3efe6"/><rect x="152" y="262" width="14" height="14" rx="3" fill="#7fb8d6"/><rect x="172" y="262" width="14" height="14" rx="3" fill="#7fb8d6"/>
+        <rect x="160" y="226" width="12" height="26" fill="#c8553d"/>
+        <path d="M30 296 L30 210 L100 290Z" fill="#fffaf0" stroke="#d9cfbf" stroke-width="2"/>
+      </g>
+      <g id="okki"><g id="okkiBody">
+        <g fill="#8e909c">
+          <ellipse cx="0" cy="0" rx="62" ry="40"/><circle cx="56" cy="-16" r="30"/>
+          <path d="M80 -10 Q100 25 88 52" stroke="#8e909c" stroke-width="13" fill="none" stroke-linecap="round"/>
+          <rect x="-48" y="18" width="18" height="42" rx="7"/><rect x="-22" y="20" width="18" height="40" rx="7"/><rect x="14" y="18" width="18" height="42" rx="7"/><rect x="36" y="16" width="17" height="42" rx="7"/>
+          <path d="M-62 -6 q-14 12 -8 30" stroke="#8e909c" stroke-width="4" fill="none"/>
+        </g>
+        <ellipse cx="42" cy="-10" rx="20" ry="26" fill="#a5a7b2"/>
+        <circle cx="68" cy="-22" r="4" fill="#2a2a2a"/><circle cx="69.5" cy="-23.5" r="1.4" fill="#fff"/>
+        <ellipse cx="60" cy="-2" rx="5" ry="3" fill="#e9a0b0" opacity=".7"/>
+      </g></g>
+      <path id="frontWave" d="M0 352 Q120 340 240 352 T480 350 T720 354 T1000 348 V420 H0Z" fill="#2f7ea3" opacity="0"/>
+      <g id="layJungle">
+        <path d="M0 420 V300 Q40 250 90 290 Q120 230 180 280 Q230 240 260 300 V420Z" fill="#2d6b3b"/>
+        <path d="M740 420 V290 Q790 240 840 280 Q880 220 930 270 Q970 240 1000 280 V420Z" fill="#2d6b3b"/>
+        <g fill="#5b3b25"><rect x="70" y="40" width="26" height="300"/><rect x="890" y="30" width="30" height="320"/><rect x="200" y="100" width="18" height="240"/></g>
+        <g fill="#2f7a40"><ellipse cx="83" cy="60" rx="120" ry="60"/><ellipse cx="905" cy="50" rx="130" ry="64"/><ellipse cx="210" cy="110" rx="80" ry="40"/><ellipse cx="780" cy="90" rx="90" ry="40"/></g>
+        <g fill="#3f9452"><ellipse cx="40" cy="30" rx="80" ry="40"/><ellipse cx="960" cy="20" rx="90" ry="40"/><ellipse cx="160" cy="70" rx="70" ry="32"/></g>
+        <path d="M130 70 Q140 160 120 250 M240 120 Q250 190 236 240 M840 80 Q860 170 846 260" stroke="#3d7a2a" stroke-width="5" fill="none"/>
+        <g fill="#4aa35b"><path d="M0 420 Q30 340 70 360 Q60 390 0 420Z"/><path d="M1000 420 Q960 330 920 360 Q940 400 1000 420Z"/><path d="M300 420 Q330 370 370 380 Q350 405 300 420Z"/><path d="M700 420 Q670 368 630 380 Q650 405 700 420Z"/></g>
+        <g fill="#e2557a"><circle cx="150" cy="320" r="7"/><circle cx="860" cy="330" r="7"/><circle cx="330" cy="395" r="6"/></g>
+      </g>
+    </svg>
+    <div class="rain"></div><div class="flash" id="flash"></div><div class="fx" id="fx"></div>
+  </div>
+
+  <div class="text-card" id="textCard">
+    <div class="story-title">Estafette · M5 · lees hardop</div>
+    <div class="text" id="text"></div>
+  </div>
+
+  <div class="controls">
+    <button class="mic" id="micBtn" aria-label="Microfoon aan of uit" disabled>🎤</button>
+    <div class="lvl" id="lvl" title="Microfoonniveau"><i></i></div>
+    <div class="status"><b id="statusTitle">Microfoon wordt gecontroleerd…</b><small id="statusSub">&nbsp;</small><div class="prog"><i id="progBar"></i></div></div>
+    <div class="ctl">
+      <div class="toggles" role="group" aria-label="Instellingen">
+        <button class="tg" data-setting="sound"></button><button class="tg" data-setting="anim"></button><button class="tg" data-setting="preview"></button>
+      </div>
+      <button class="btn small" id="prevSent" title="Ga terug naar het begin van de zin">⏮ Vorige zin</button>
+      <button class="btn small" id="demoBtn">▶️ Demo</button>
+      <select id="speedSel" aria-label="Leestempo van de demo"><option value="1.35">🐢 Rustig</option><option value="1" selected>🚶 Gemiddeld</option><option value=".72">🐇 Vlot</option></select>
+      <label class="vol" title="Volume van de geluiden">🔈<input type="range" id="vol" min="0" max="1" step=".05" value=".7"></label>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="startModal">
+  <div class="card">
+    <div class="card-top"><div class="big">🐘</div><div><div class="eyebrow">Lees & Luister · leesmotivatie</div><h1>Okki is de weg kwijt</h1></div></div>
+    <div class="card-body">
+      <p>Lees het verhaal hardop voor. De computer luistert mee en weet precies waar je bent. Lees je over apen? Dan hoor je ze ook. Begint het te regenen? Dan regent het om je heen!</p>
+      <div class="steps"><div class="step"><span>🎤</span>Druk op de microfoon</div><div class="step"><span>📖</span>Lees hardop</div><div class="step"><span>🐒</span>Hoor het verhaal tot leven komen</div></div>
+      <div class="choose"><b>Kies zelf hoe je wilt lezen</b><div class="toggles">
+        <button class="tg" data-setting="sound"></button><button class="tg" data-setting="anim"></button><button class="tg" data-setting="preview"></button><button class="tg" data-setting="grammar"></button></div></div>
+      <div class="tip">🎧 <span>Tip: gebruik een koptelefoon. Dan hoort de microfoon alleen jouw stem, en niet de geluiden. Wil je ergens opnieuw beginnen? Tik op een woord en kies <b>Lees vanaf hier</b>.</span></div>
+      <div class="model-box"><div id="modelState">🧠 Deze versie herkent spraak op het apparaat zelf. De eerste keer wordt een spraakmodel van ±40 MB gedownload; daarna blijft het in je browser.</div>
+        <details style="margin-top:6px"><summary style="cursor:pointer">Lukt downloaden niet? Kies het modelbestand zelf</summary>
+          <div style="font-weight:600;margin-top:6px">Download <b>vosk-model-small-nl-0.22.zip</b> (zie de README) en kies het hier:</div>
+          <input type="file" id="modelFile" accept=".zip,.gz,.tgz"></details></div>
+      <div class="tip warn hidden" id="micWarn"></div>
+      <div class="tip warn" id="artifactNote">ℹ️ <span>In deze Claude-versie blokkeert de pagina de microfoon en het downloaden van het spraakmodel. Kies daarom hierboven het modelbestand <b>vosk-model-small-nl-0.22.zip</b> en test met <b>🎧 een opname</b> van iemand die het verhaal voorleest. Live voorlezen met de microfoon kan in de GitHub-versie.</span></div>
+      <div class="btn-row">
+        <button class="btn primary" id="startMic" disabled>🎤 Ik ga zelf lezen</button>
+        <button class="btn" id="startDemo">▶️ Bekijk de demo</button>
+        <button class="btn" id="startFile" title="Kies een opname van iemand die het verhaal voorleest">🎧 Test met een opname</button>
+        <input type="file" id="audioFile" accept="audio/*,video/*" class="hidden">
+      </div>
+      <button class="linkish" id="startManual">Zonder microfoon: zelf doorklikken met de spatiebalk</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="endModal">
+  <div class="card">
+    <div class="card-top"><div class="big">🏆</div><div><div class="eyebrow">Verhaal uit!</div><h1>Knap gelezen!</h1></div></div>
+    <div class="card-body">
+      <div class="stats" id="stats"></div>
+      <p style="margin-bottom:6px"><b>Geluiden die jij tot leven hebt gelezen:</b></p>
+      <div class="badges" id="badges"></div>
+      <div class="btn-row"><button class="btn primary" id="again">↺ Nog een keer lezen</button><button class="btn" id="close">Bekijk het verhaal</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   VERHAAL – {woord|cue} koppelt een geluid/animatie aan een woord.
+   De cue start zodra de lezer dat woord heeft uitgesproken.
+   ================================================================ */
+const STORY=[
+ 'Okki de olifant zat op een grote boot, die langzaam over de {rivier|river} voer.',
+ 'Ineens kwam er een hoge golf. De boot schommelde heen en weer en {plons|splash}! Okki viel in het water.',
+ 'Met haar sterke poten zwom ze naar de kant. Daar begon een groot, donker {bos|jungle}.',
+ 'Het was het Amazoneregenwoud. Overal hoorde Okki {vogels|birds} fluiten.',
+ 'Hoog boven haar hoofd slingerden {apen|monkeys} van tak naar tak. Oe oe, aa aa, riepen ze.',
+ '‘Hallo,’ zei Okki zacht. ‘Weten jullie de weg naar de rivier?’ Maar de apen lachten haar alleen uit.',
+ 'Okki liep verder het bos in. {Krak|crack}! Onder haar grote voeten braken takjes.',
+ 'Een bonte {papegaai|parrot} vloog krijsend voorbij.',
+ 'Toen werd de lucht donker. Het begon te {regenen|rain}, eerst zacht en toen heel hard.',
+ '{Boem|thunder}! Daar rommelde de donder.',
+ 'Okki was bang. Ze stak haar slurf omhoog en {toeterde|trumpet} zo hard als ze kon.',
+ 'Toen hoorde ze iets terug: het gekwaak van heel veel {kikkers|frogs}.',
+ '‘Kikkers wonen bij het water!’ dacht Okki. Ze liep op het geluid af.',
+ 'De regen {stopte|rainstop} en daar was de {rivier|riverback}! Op het water lag de boot.',
+ '‘Okki!’ riep de kapitein blij. Hij liet de {hoorn|horn} van de boot klinken.',
+ 'Okki toeterde nog één keer. Dit keer niet van angst, maar van {geluk|happy}.'
+];
+const CUES={
+  river:{ico:'🌊',name:'Rivier'}, splash:{ico:'💦',name:'Plons'}, jungle:{ico:'🌳',name:'Regenwoud'}, birds:{ico:'🐦',name:'Vogels'},
+  monkeys:{ico:'🐒',name:'Apen'}, crack:{ico:'🪵',name:'Takjes'}, parrot:{ico:'🦜',name:'Papegaai'}, rain:{ico:'🌧️',name:'Regen'},
+  thunder:{ico:'⚡',name:'Donder'}, trumpet:{ico:'🐘',name:'Getoeter'}, frogs:{ico:'🐸',name:'Kikkers'}, rainstop:{ico:'🌤️',name:'Zon'},
+  riverback:{ico:'🛶',name:'Terug bij de boot'}, horn:{ico:'📯',name:'Scheepshoorn'}, happy:{ico:'🎉',name:'Feest'}
+};
+
+/* ---------- tokens ---------- */
+const NUM={'1':'een','2':'twee','3':'drie','4':'vier','5':'vijf','300':'driehonderd'};
+const norm=s=>{ s=String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); return NUM[s]||s; };
+const TOK=[]; // {text,norm,cues,el,si}
+function buildText(){
+  const box=document.getElementById('text'); box.innerHTML=''; TOK.length=0;
+  STORY.forEach((sent,si)=>{
+    const parts=sent.replace(/\{([^}|]+)\|([^}]+)\}/g,(m,w,c)=>`\u0001${w}\u0002${c}\u0003`).split(/\s+/);
+    parts.forEach(p=>{
+      let cues=[], text=p;
+      const m=p.match(/^(.*)\u0001(.*)\u0002(.*)\u0003(.*)$/);
+      if(m){ text=m[1]+m[2]+m[4]; cues=m[3].split(','); }
+      const n=norm(text); if(!n) { box.append(text+' '); return; }
+      const sp=document.createElement('span'); sp.className='w'+(cues.length?' cue':''); sp.textContent=text;
+      if(cues.length){ const ic=document.createElement('span'); ic.className='ico'; ic.textContent=cues.map(c=>CUES[c].ico).join(''); sp.appendChild(ic); }
+      const i=TOK.length; sp.dataset.i=i; sp.onclick=()=>onWordClick(i);
+      TOK.push({text,norm:n,cues,el:sp,si}); box.appendChild(sp); box.append(' ');
+    });
+    box.append(' ');
+  });
+}
+
+/* ================================================================
+   GELUIDEN – volledig gegenereerd met Web Audio (geen bestanden)
+   ================================================================ */
+const Snd={
+  ctx:null, master:null, noise:null, loops:{}, timers:[], vol:.7,
+  init(){
+    if(this.ctx){ if(this.ctx.state==='suspended') this.ctx.resume(); return; }
+    const C=window.AudioContext||window.webkitAudioContext; if(!C) return;
+    this.ctx=new C(); this.master=this.ctx.createGain(); this.master.gain.value=SET.sound?this.vol:0; this.master.connect(this.ctx.destination);
+    const len=this.ctx.sampleRate*2, b=this.ctx.createBuffer(1,len,this.ctx.sampleRate), d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()*2-1; this.noise=b;
+  },
+  setVol(v){ this.vol=v; this.applyVol(); },
+  applyVol(){ if(this.master) this.master.gain.setTargetAtTime(SET.sound?this.vol:0,this.ctx.currentTime,.08); },
+  t(){ return this.ctx.currentTime; },
+  ns(){ const s=this.ctx.createBufferSource(); s.buffer=this.noise; s.loop=true; s.loopStart=Math.random(); return s; },
+  out(node,pan=0){ if(this.ctx.createStereoPanner){ const p=this.ctx.createStereoPanner(); p.pan.value=pan; node.connect(p); p.connect(this.master); } else node.connect(this.master); },
+  env(g,t,a,h,r,peak){ g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+a); g.gain.setValueAtTime(peak,t+a+h); g.gain.exponentialRampToValueAtTime(.0001,t+a+h+r); },
+  filt(type,f,q=1){ const b=this.ctx.createBiquadFilter(); b.type=type; b.frequency.value=f; b.Q.value=q; return b; },
+  every(fn,min,max){ let alive=true; const tick=()=>{ if(!alive) return; fn(); setTimeout(tick,min+Math.random()*(max-min)); }; setTimeout(tick,min*Math.random()); return ()=>{alive=false}; },
+  /* ---- doorlopende sferen ---- */
+  loop(name,on,level){
+    if(!this.ctx) return; const L=this.loops[name];
+    if(on){ if(L){ L.g.gain.setTargetAtTime(level??L.level,this.t(),.8); return; } const g=this.ctx.createGain(); g.gain.value=.0001; g.connect(this.master);
+      const made=this['mk_'+name](g); const lv=level??made.level; g.gain.setTargetAtTime(lv,this.t(),.9); this.loops[name]={g,level:lv,stop:made.stop}; }
+    else if(L){ L.g.gain.setTargetAtTime(.0001,this.t(),.7); const st=L.stop; delete this.loops[name]; setTimeout(()=>{ try{st&&st();}catch(e){} try{L.g.disconnect();}catch(e){} },3500); }
+  },
+  mk_river(g){ const s=this.ns(), lp=this.filt('lowpass',650,.7), lfo=this.ctx.createOscillator(), lg=this.ctx.createGain();
+    lfo.frequency.value=.13; lg.gain.value=260; lfo.connect(lg); lg.connect(lp.frequency); s.connect(lp); lp.connect(g); s.start(); lfo.start();
+    const s2=this.ns(), bp=this.filt('bandpass',1800,1.5), g2=this.ctx.createGain(); g2.gain.value=.15; s2.connect(bp); bp.connect(g2); g2.connect(g); s2.start();
+    return {level:.32,stop:()=>{s.stop();s2.stop();lfo.stop();}}; },
+  mk_jungle(g){ const s=this.ns(), bp=this.filt('bandpass',5200,9), am=this.ctx.createGain(), lfo=this.ctx.createOscillator(), lg=this.ctx.createGain();
+    am.gain.value=.5; lfo.frequency.value=27; lg.gain.value=.5; lfo.connect(lg); lg.connect(am.gain); s.connect(bp); bp.connect(am); am.connect(g); s.start(); lfo.start();
+    const stopBirds=this.every(()=>this.chirps(1+Math.floor(Math.random()*3),.07,Math.random()*1.6-.8),1400,4200);
+    return {level:.35,stop:()=>{s.stop();lfo.stop();stopBirds();}}; },
+  mk_rain(g){ const s=this.ns(), hp=this.filt('highpass',900), lp=this.filt('lowpass',7500); s.connect(hp); hp.connect(lp); lp.connect(g); s.start();
+    const s2=this.ns(), lp2=this.filt('lowpass',400), g2=this.ctx.createGain(); g2.gain.value=.6; s2.connect(lp2); lp2.connect(g2); g2.connect(g); s2.start();
+    const stopDrops=this.every(()=>this.drop(),40,160);
+    return {level:.42,stop:()=>{s.stop();s2.stop();stopDrops();}}; },
+  mk_frogs(g){ const stop=this.every(()=>this.croak(g),110,420); return {level:1,stop}; },
+  /* ---- losse geluiden ---- */
+  chirps(n=8,vol=.18,pan=0){ const t0=this.t();
+    for(let i=0;i<n;i++){ const t=t0+i*(.09+Math.random()*.25), o=this.ctx.createOscillator(), g=this.ctx.createGain(), f=2200+Math.random()*2600;
+      o.type='sine'; o.frequency.setValueAtTime(f,t); o.frequency.exponentialRampToValueAtTime(f*(Math.random()<.5?1.6:.6),t+.07);
+      this.env(g,t,.008,.03,.06,vol); o.connect(g); this.out(g,pan+(Math.random()-.5)*.6); o.start(t); o.stop(t+.2); } },
+  birds(){ this.chirps(10,.2,-.5); setTimeout(()=>this.chirps(8,.16,.6),700); setTimeout(()=>this.chirps(6,.14,0),1500); },
+  monkeys(){ const call=(t,pan,base)=>{ const seq=['oe','oe','aa','aa','aa'];
+      seq.forEach((v,i)=>{ const ti=t+i*.26, o=this.ctx.createOscillator(), g=this.ctx.createGain(), f1=this.filt('bandpass',v==='oe'?450:850,5), f2=this.filt('bandpass',v==='oe'?900:1300,6), mix=this.ctx.createGain();
+        o.type='sawtooth'; const b=base*(v==='oe'?1:1.35); o.frequency.setValueAtTime(b*.8,ti); o.frequency.exponentialRampToValueAtTime(b*1.5,ti+.12); o.frequency.exponentialRampToValueAtTime(b*1.1,ti+.22);
+        o.connect(f1); o.connect(f2); f1.connect(mix); f2.connect(mix); mix.gain.value=1.4; mix.connect(g); this.env(g,ti,.02,.1,.1,.5); this.out(g,pan); o.start(ti); o.stop(ti+.3); }); };
+    const t=this.t(); call(t,-.5,330); call(t+.9,.6,420); call(t+1.9,.1,360); },
+  splash(){ const t=this.t(), s=this.ns(), bp=this.filt('bandpass',3000,.8), g=this.ctx.createGain();
+    bp.frequency.setValueAtTime(3500,t); bp.frequency.exponentialRampToValueAtTime(400,t+.7); s.connect(bp); bp.connect(g); this.env(g,t,.005,.05,.8,.9); this.out(g); s.start(t); s.stop(t+1.2);
+    const o=this.ctx.createOscillator(), g2=this.ctx.createGain(); o.frequency.setValueAtTime(110,t); o.frequency.exponentialRampToValueAtTime(40,t+.35); this.env(g2,t,.005,.02,.35,.7); o.connect(g2); this.out(g2); o.start(t); o.stop(t+.5);
+    for(let i=0;i<14;i++) setTimeout(()=>this.drop(.25),300+Math.random()*900); },
+  drop(vol=.12){ const t=this.t(), o=this.ctx.createOscillator(), g=this.ctx.createGain(), f=1500+Math.random()*2500;
+    o.frequency.setValueAtTime(f,t); o.frequency.exponentialRampToValueAtTime(f*.5,t+.03); this.env(g,t,.002,.005,.03,vol*Math.random()); o.connect(g); this.out(g,Math.random()*1.8-.9); o.start(t); o.stop(t+.06); },
+  crack(){ [0,.2,.33,.6].forEach((d,i)=>{ const t=this.t()+d, s=this.ns(), hp=this.filt('highpass',1200), g=this.ctx.createGain();
+      s.connect(hp); hp.connect(g); this.env(g,t,.001,.012,.07,.9-i*.15); this.out(g,(Math.random()-.5)*.6); s.start(t); s.stop(t+.12);
+      const o=this.ctx.createOscillator(), g2=this.ctx.createGain(); o.type='triangle'; o.frequency.value=700+Math.random()*500; this.env(g2,t,.001,.005,.05,.3); o.connect(g2); this.out(g2); o.start(t); o.stop(t+.08); });
+    [0,.7].forEach(d=>{ const t=this.t()+d+.05, o=this.ctx.createOscillator(), g=this.ctx.createGain(); o.frequency.setValueAtTime(70,t); o.frequency.exponentialRampToValueAtTime(35,t+.2); this.env(g,t,.01,.02,.2,.6); o.connect(g); this.out(g); o.start(t); o.stop(t+.3); }); },
+  parrot(){ [0,.45,.8].forEach((d,i)=>{ const t=this.t()+d, o=this.ctx.createOscillator(), m=this.ctx.createOscillator(), mg=this.ctx.createGain(), bp=this.filt('bandpass',1900,2), g=this.ctx.createGain();
+      o.type='sawtooth'; o.frequency.setValueAtTime(1500-i*100,t); o.frequency.exponentialRampToValueAtTime(950,t+.3); m.frequency.value=55; mg.gain.value=320; m.connect(mg); mg.connect(o.frequency);
+      o.connect(bp); bp.connect(g); this.env(g,t,.01,.15,.12,.32); this.out(g,.8-i*.8); o.start(t); m.start(t); o.stop(t+.35); m.stop(t+.35); }); },
+  thunder(){ const t=this.t(), s=this.ns(), hp=this.filt('highpass',700), g=this.ctx.createGain(); s.connect(hp); hp.connect(g); this.env(g,t,.003,.05,.4,.55); this.out(g); s.start(t); s.stop(t+.6);
+    const r=this.ns(), lp=this.filt('lowpass',220,.8), g2=this.ctx.createGain(); lp.frequency.setValueAtTime(260,t); lp.frequency.exponentialRampToValueAtTime(80,t+4);
+    r.connect(lp); lp.connect(g2); g2.gain.setValueAtTime(.0001,t); g2.gain.exponentialRampToValueAtTime(1.4,t+.15);
+    for(let k=1;k<18;k++) g2.gain.linearRampToValueAtTime((1.4-k*.07)*(.5+Math.random()*.6),t+.15+k*.2);
+    g2.gain.exponentialRampToValueAtTime(.0001,t+4.6); this.out(g2); r.start(t); r.stop(t+4.8); },
+  trumpet(){ const t=this.t(), ws=this.ctx.createWaveShaper(), curve=new Float32Array(256); for(let i=0;i<256;i++){ const x=i/128-1; curve[i]=Math.tanh(x*3); } ws.curve=curve;
+    const bp=this.filt('bandpass',1100,1.1), g=this.ctx.createGain(), vib=this.ctx.createOscillator(), vg=this.ctx.createGain(); vib.frequency.value=7; vg.gain.value=14; vib.connect(vg);
+    [1,1.007].forEach(det=>{ const o=this.ctx.createOscillator(); o.type='sawtooth'; const f=x=>x*det;
+      o.frequency.setValueAtTime(f(380),t); o.frequency.exponentialRampToValueAtTime(f(640),t+.18); o.frequency.exponentialRampToValueAtTime(f(590),t+.7); o.frequency.exponentialRampToValueAtTime(f(450),t+1.25);
+      vg.connect(o.frequency); o.connect(ws); o.start(t); o.stop(t+1.5); });
+    ws.connect(bp); bp.connect(g); this.env(g,t,.06,.95,.35,.32); this.out(g,-.1); vib.start(t); vib.stop(t+1.5); },
+  croak(dest){ const t=this.t(), o=this.ctx.createOscillator(), am=this.ctx.createOscillator(), ag=this.ctx.createGain(), g=this.ctx.createGain(), lp=this.filt('lowpass',900), f=110+Math.random()*90;
+    o.type='square'; o.frequency.value=f; am.type='square'; am.frequency.value=18+Math.random()*10; ag.gain.value=.5; am.connect(ag); ag.connect(g.gain);
+    o.connect(lp); lp.connect(g); const out=this.ctx.createGain(); this.env(out,t,.01,.12+Math.random()*.15,.06,.09); g.connect(out);
+    if(this.ctx.createStereoPanner){ const p=this.ctx.createStereoPanner(); p.pan.value=Math.random()*1.8-.9; out.connect(p); p.connect(dest||this.master); } else out.connect(dest||this.master);
+    o.start(t); am.start(t); o.stop(t+.4); am.stop(t+.4); },
+  horn(){ const t=this.t(), lp=this.filt('lowpass',800), g=this.ctx.createGain(); [110,138.6,82.4].forEach(f=>{ const o=this.ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=f; o.connect(lp); o.start(t); o.stop(t+1.9); });
+    lp.connect(g); this.env(g,t,.12,1.2,.5,.22); this.out(g,.4); },
+  happy(){ const t=this.t(); [523.25,659.25,783.99,1046.5,783.99,1046.5].forEach((f,i)=>{ const o=this.ctx.createOscillator(), g=this.ctx.createGain(); o.type='triangle'; o.frequency.value=f;
+      const ti=t+.3+i*.13; this.env(g,ti,.01,.05,.5,.22); o.connect(g); this.out(g); o.start(ti); o.stop(ti+.7); }); },
+  stopAll(){ Object.keys(this.loops).forEach(k=>this.loop(k,false)); }
+};
+
+/* ================================================================
+   SCÈNE – wat er in beeld gebeurt bij elke cue
+   ================================================================ */
+const scene=document.getElementById('scene'), fx=document.getElementById('fx');
+function setMode(m){ scene.classList.remove('m-start','m-water','m-jungle','m-end'); scene.classList.add('m-'+m);
+  document.getElementById('frontWave').style.opacity = m==='water'?'.9':'0'; }
+function spawn(txt,cls,style,ms=3500){ if(!SET.anim) return null; const s=document.createElement('span'); s.textContent=txt; s.className=cls; Object.assign(s.style,style); fx.appendChild(s); setTimeout(()=>s.remove(),ms); return s; }
+function bubble(txt,x,y){ if(!SET.anim) return; const b=document.createElement('div'); b.className='bubble'; b.textContent=txt; b.style.left=x; b.style.top=y; fx.appendChild(b); setTimeout(()=>b.remove(),1900); }
+function shakeOkki(){ if(!SET.anim) return; const o=document.getElementById('okkiBody'); o.classList.remove('shake'); void o.getBoundingClientRect(); o.classList.add('shake'); }
+function flash(){ if(!SET.anim) return; const f=document.getElementById('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+
+/* De "wereld" (welk decor, welke achtergrondgeluiden) volgt uit alle cues vóór een positie.
+   Daardoor klopt alles weer als je terugspringt in de tekst. */
+const WORLD0=()=>({mode:'start',storm:false,loops:{river:.18}});
+const REDUCE={
+  river:w=>{ w.loops.river=.4; },
+  splash:w=>{ w.mode='water'; },
+  jungle:w=>{ w.mode='jungle'; w.loops.jungle=.35; w.loops.river=.08; },
+  rain:w=>{ w.storm=true; w.loops.rain=.42; w.loops.jungle=.15; },
+  frogs:w=>{ w.loops.frogs=1; },
+  rainstop:w=>{ w.storm=false; delete w.loops.rain; },
+  riverback:w=>{ w.mode='end'; w.loops.river=.35; w.loops.jungle=.18; delete w.loops.frogs; }
+};
+function worldAt(p){ const w=WORLD0(); for(let i=0;i<p&&i<TOK.length;i++) TOK[i].cues.forEach(c=>REDUCE[c]&&REDUCE[c](w)); return w; }
+function syncWorld(){ const w=S.world; setMode(w.mode); scene.classList.toggle('storm',w.storm); scene.classList.toggle('raining',w.storm);
+  if(Snd.ctx) ['river','jungle','rain','frogs'].forEach(n=> w.loops[n] ? Snd.loop(n,true,w.loops[n]) : Snd.loop(n,false)); }
+
+/* Eenmalige effecten: geluid + animatie op het moment dat het woord gelezen wordt */
+const SCENE={
+  river:()=>{ bubble('Klots, klots…','62%','12%'); },
+  splash:()=>{ Snd.splash(); bubble('PLONS!','40%','30%'); for(let i=0;i<6;i++) spawn('💧','a-pop',{left:(38+Math.random()*14)+'%',top:(48+Math.random()*20)+'%',fontSize:'34px',animationDelay:(i*.08)+'s'},2200); },
+  birds:()=>{ Snd.birds(); ['🐦','🐦','🐤'].forEach((e,i)=>spawn(e,'a-fly',{top:(10+i*9)+'%',left:'0',fontSize:'34px',animationDelay:(i*.45)+'s'},4800)); },
+  monkeys:()=>{ Snd.monkeys(); spawn('🐒','a-swing',{top:'8%',left:'0',fontSize:'60px'},3300); spawn('🐒','a-swing',{top:'2%',left:'0',fontSize:'46px',animationDelay:'.9s'},4300); bubble('Oe oe, aa aa!','58%','8%'); },
+  crack:()=>{ Snd.crack(); bubble('KRAK!','30%','46%'); },
+  parrot:()=>{ Snd.parrot(); spawn('🦜','a-flyr',{top:'14%',left:'0',fontSize:'58px'},3200); },
+  thunder:()=>{ Snd.thunder(); flash(); bubble('BOEM!','58%','18%'); },
+  trumpet:()=>{ Snd.trumpet(); shakeOkki(); bubble('TOETER!','36%','30%'); },
+  frogs:()=>{ for(let i=0;i<4;i++) spawn('🐸','a-hop',{left:(52+i*9)+'%',bottom:'6%',fontSize:'38px',animationDelay:(i*.35)+'s'},4200); bubble('Kwaak kwaak!','66%','40%'); },
+  horn:()=>{ Snd.horn(); bubble('TOEEET!','70%','18%'); },
+  happy:()=>{ Snd.trumpet(); Snd.happy(); shakeOkki();
+    for(let i=0;i<22;i++) spawn(['🎉','✨','⭐','🎊'][i%4],'a-confetti',{left:(Math.random()*96)+'%',top:'-8%',fontSize:(22+Math.random()*20)+'px',animationDelay:(Math.random()*.8)+'s'},3600); }
+};
+
+/* ---------- instellingen (kind kiest zelf) ---------- */
+const SET={sound:true,anim:true,preview:false,grammar:true};
+try{ Object.assign(SET,JSON.parse(localStorage.getItem('ll-settings')||'{}')); }catch(e){}
+if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches && !localStorage.getItem('ll-settings')) SET.anim=false;
+const SET_LABEL={ sound:['🔊 Geluid aan','🔇 Geluid uit'], anim:['🖼️ Plaatjes aan','📄 Alleen tekst'], preview:['👀 Icoontjes vooraf aan','🙈 Icoontjes vooraf uit'], grammar:['🎯 Alleen woorden uit het verhaal','🌐 Alle Nederlandse woorden'] };
+const SET_TIP={ sound:'Zet alle geluiden aan of uit', anim:'Laat het plaatje zien, of lees alleen de tekst', preview:'Laat vooraf zien bij welke woorden iets gebeurt', grammar:'Laat de herkenner alleen naar woorden uit dit verhaal luisteren (sneller en nauwkeuriger)' };
+function applySettings(){
+  document.body.classList.toggle('no-anim',!SET.anim); document.body.classList.toggle('preview-cues',SET.preview);
+  document.querySelectorAll('[data-setting]').forEach(b=>{ const k=b.dataset.setting, on=!!SET[k]; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); b.textContent=SET_LABEL[k][on?0:1]; b.title=SET_TIP[k]; });
+  const v=document.getElementById('vol'); if(v) v.disabled=!SET.sound;
+  Snd.applyVol(); if(!SET.anim) fx.innerHTML='';
+  try{ localStorage.setItem('ll-settings',JSON.stringify(SET)); }catch(e){}
+}
+function toggleSetting(k){ SET[k]=!SET[k]; if(k==='sound') Snd.init(); applySettings();
+  toast({sound:SET.sound?'🔊 De geluiden staan aan.':'🔇 De geluiden staan uit. Je leest in stilte.',anim:SET.anim?'🖼️ De plaatjes staan aan.':'📄 Je ziet nu alleen de tekst, zonder plaatjes.',preview:SET.preview?'👀 Je ziet nu vooraf bij welke woorden iets gebeurt.':'🙈 Verrassing! De icoontjes verschijnen pas als je het woord leest.',grammar:SET.grammar?'🎯 De herkenner luistert alleen naar woorden uit het verhaal. Zet de microfoon uit en aan om dit te gebruiken.':'🌐 De herkenner luistert naar alle Nederlandse woorden. Zet de microfoon uit en aan om dit te gebruiken.'}[k]); }
+
+/* ================================================================
+   MEELEZEN – positie bijhouden op basis van herkende woorden
+   ================================================================ */
+const S={ pos:0, phraseStart:0, mode:null, fired:new Set(), startTime:0, endTime:0, lastMove:0, demoTimer:null, stuckTimer:null, world:WORLD0(), skipWords:0, partialCount:0 };
+const $=id=>document.getElementById(id);
+
+function lev(a,b){ if(a===b) return 0; const m=a.length,n=b.length; if(!m||!n) return m||n; let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; } return prev[n]; }
+function sim(r,e){ if(!r||!e) return false; if(r===e) return true;
+  const mn=Math.min(r.length,e.length), mx=Math.max(r.length,e.length);
+  if(mn>=4 && (e.startsWith(r)||r.startsWith(e)) && mn>=.7*mx) return true;
+  const tol = e.length>=8?2 : e.length>=4?1 : 0; return tol>0 && lev(r,e)<=tol; }
+function align(start,words){
+  let p=start;
+  for(let i=0;i<words.length;i++){
+    const tryMatch=w=>{ for(let k=0;k<=4;k++){ const j=p+k; if(j>=TOK.length) break; const e=TOK[j].norm; if(e.length<=3 && k>1) continue; if(sim(w,e)) return j; } return -1; };
+    let j=tryMatch(words[i]);
+    if(j<0 && i+1<words.length){ j=tryMatch(words[i]+words[i+1]); if(j>=0) i++; }
+    if(j>=0) p=j+1;
+  }
+  return p;
+}
+const toWords=t=>String(t).split(/[\s\-–]+/).map(norm).filter(Boolean);
+
+function setPos(p,{silent=false}={}){
+  p=Math.max(0,Math.min(TOK.length,p)); const old=S.pos; if(p===old) return;
+  if(!S.startTime && p>0) S.startTime=performance.now();
+  if(p>old){ for(let i=Math.max(0,old);i<p;i++){ TOK[i].el.classList.add('read'); TOK[i].el.classList.remove('cur','stuck');
+      if(!silent) TOK[i].cues.forEach(c=>fire(c,i)); } }
+  else { for(let i=p;i<old;i++) TOK[i].el.classList.remove('read'); }
+  if(old>=0 && old<TOK.length) TOK[old].el.classList.remove('cur','stuck');
+  S.pos=p; S.lastMove=performance.now();
+  if(p<TOK.length){ const el=TOK[p].el; el.classList.add('cur'); scrollToWord(el); }
+  $('progBar').style.width=(p/TOK.length*100)+'%';
+  if(p>=TOK.length && !S.endTime){ S.endTime=performance.now(); setTimeout(finish,2600); }
+}
+function scrollToWord(el){ const card=$('textCard'); const top=el.offsetTop - card.clientHeight*.38; if(Math.abs(card.scrollTop-top)>card.clientHeight*.18) card.scrollTop=Math.max(0,top); }
+function fire(c,i){ if(S.fired.has(c+'@'+i)) return; S.fired.add(c+'@'+i); TOK[i].el.classList.add('fired');
+  if(REDUCE[c]){ REDUCE[c](S.world); syncWorld(); } try{ SCENE[c]&&SCENE[c](); }catch(e){ console.warn(e); } }
+
+function onWordClick(i){ openWordMenu(i); }
+function openWordMenu(i){
+  closeWordMenu(); const el=TOK[i].el, card=$('textCard'), m=document.createElement('div');
+  m.className='wordmenu'; m.id='wordMenu';
+  m.innerHTML='<button data-a="here">▶ Lees vanaf hier</button><button data-a="say">🔊 Hoor dit woord</button>';
+  card.appendChild(m);
+  m.style.top=(el.offsetTop+el.offsetHeight+6)+'px';
+  m.style.left=Math.max(8,Math.min(el.offsetLeft-10,card.clientWidth-m.offsetWidth-8))+'px';
+  m.querySelector('[data-a=here]').onclick=()=>{ if(!S.mode) beginMode('manual'); jumpTo(i); };
+  m.querySelector('[data-a=say]').onclick=()=>{ speakWord(TOK[i].text); closeWordMenu(); };
+  m.querySelector('button').focus({preventScroll:true});
+}
+function closeWordMenu(){ const m=$('wordMenu'); if(m) m.remove(); }
+/* Springen naar een plek: decor en achtergrondgeluid worden opnieuw opgebouwd,
+   en alle geluidsmomenten vanaf die plek kunnen opnieuw afgaan. */
+function jumpTo(p){
+  closeWordMenu(); Snd.init(); p=Math.max(0,Math.min(TOK.length-1,p));
+  if(S.endTime){ S.endTime=0; hideModal('endModal'); }
+  const keep=new Set();
+  TOK.forEach((t,i)=>{ t.el.classList.toggle('read',i<p); t.el.classList.remove('cur','stuck'); const f=i<p&&t.cues.length>0; t.el.classList.toggle('fired',f); if(f) t.cues.forEach(c=>keep.add(c+'@'+i)); });
+  S.fired=keep; S.world=worldAt(p); fx.innerHTML=''; syncWorld();
+  S.pos=p; S.phraseStart=p; S.skipWords=S.partialCount; S.lastMove=performance.now(); if(!S.startTime) S.startTime=performance.now();
+  TOK[p].el.classList.add('cur'); scrollToWord(TOK[p].el); $('progBar').style.width=(p/TOK.length*100)+'%';
+  toast('⏪ Je leest verder vanaf “'+TOK[p].text.replace(/[‘’,.!?:]/g,'')+'”');
+  if(S.mode==='demo' && S.demoTimer){ clearTimeout(S.demoTimer); S.demoTimer=setTimeout(demoStep,900); }
+}
+function sentenceStart(si){ return TOK.findIndex(t=>t.si===si); }
+function prevSentence(){ const p=Math.min(S.pos,TOK.length-1); let si=TOK[p].si, st=sentenceStart(si);
+  if(S.pos-st<=1 && si>0) st=sentenceStart(si-1); jumpTo(st); }
+function speakWord(w){ if(!('speechSynthesis' in window)) return; speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(w.replace(/[‘’!?,.:]/g,'')); u.lang='nl-NL'; u.rate=.75;
+  const v=speechSynthesis.getVoices().find(v=>/^nl/i.test(v.lang)); if(v) u.voice=v; speechSynthesis.speak(u); }
+
+/* ---------- spraakherkenning: Vosk, volledig in de browser (offline na eerste download) ---------- */
+const VOSK_LIB='https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js';
+// Eerst een eigen kopie naast deze pagina (model/), anders de mirror op Hugging Face.
+const MODEL_SOURCES=['model/vosk-model-small-nl-0.22.zip','model/vosk-model-small-nl-0.22.tar.gz',
+  'https://huggingface.co/rhasspy/vosk-models/resolve/main/nl/vosk-model-small-nl-0.22.zip'];
+const MODEL_CACHE='ll-vosk-nl-v1', MODEL_KEY='vosk-model-small-nl-0.22.tar.gz';
+
+function loadScript(src){ return new Promise((ok,fail)=>{ if(window.Vosk) return ok(); const s=document.createElement('script'); s.src=src; s.onload=()=>ok(); s.onerror=()=>fail(new Error('lib')); document.head.appendChild(s); }); }
+
+/* -- zip uitpakken en omzetten naar .tar.gz (dat formaat verwacht vosk-browser) -- */
+async function inflateRaw(u8){ const st=new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return new Uint8Array(await new Response(st).arrayBuffer()); }
+async function unzip(buf){
+  const u8=new Uint8Array(buf), dv=new DataView(buf); let e=-1;
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-66000);i--) if(dv.getUint32(i,true)===0x06054b50){ e=i; break; }
+  if(e<0) throw new Error('geen zip');
+  const n=dv.getUint16(e+10,true); let p=dv.getUint32(e+16,true); const out=[], td=new TextDecoder();
+  for(let k=0;k<n;k++){
+    if(dv.getUint32(p,true)!==0x02014b50) throw new Error('zip kapot');
+    const method=dv.getUint16(p+10,true), csize=dv.getUint32(p+20,true), nlen=dv.getUint16(p+28,true), xlen=dv.getUint16(p+30,true), clen=dv.getUint16(p+32,true), off=dv.getUint32(p+42,true);
+    const name=td.decode(u8.subarray(p+46,p+46+nlen)); p+=46+nlen+xlen+clen;
+    if(name.endsWith('/')) continue;
+    const ds=off+30+dv.getUint16(off+26,true)+dv.getUint16(off+28,true), raw=u8.subarray(ds,ds+csize);
+    out.push({name, data: method===0 ? raw.slice() : method===8 ? await inflateRaw(raw) : (()=>{ throw new Error('zip-methode '+method); })()});
+  }
+  return out;
+}
+function tarHeader(name,size,dir){
+  const h=new Uint8Array(512), enc=new TextEncoder(), put=(s,o,l)=>h.set(enc.encode(s).subarray(0,l),o), oct=(v,l)=>v.toString(8).padStart(l-1,'0')+'\0';
+  put(name,0,100); put(dir?'0000755\0':'0000644\0',100,8); put('0000000\0',108,8); put('0000000\0',116,8);
+  put(oct(size,12),124,12); put(oct(Math.floor(Date.now()/1000),12),136,12); put('        ',148,8); h[156]=(dir?'5':'0').charCodeAt(0);
+  put('ustar\0',257,6); put('00',263,2);
+  let sum=0; for(let i=0;i<512;i++) sum+=h[i]; put(sum.toString(8).padStart(6,'0')+'\0 ',148,8); return h;
+}
+async function filesToTarGz(files){
+  // alles onder één map "model/", zoals vosk-browser verwacht
+  const strip=n=>n.replace(/^\.?\/?/,'').split('/').slice(1).join('/');
+  const items=files.map(f=>({name:'model/'+strip(f.name),data:f.data})).filter(f=>f.name!=='model/');
+  const dirs=new Set(['model/']); items.forEach(f=>{ const parts=f.name.split('/'); for(let i=1;i<parts.length-1;i++) dirs.add(parts.slice(0,i+1).join('/')+'/'); });
+  const chunks=[]; [...dirs].sort().forEach(d=>chunks.push(tarHeader(d,0,true)));
+  items.forEach(f=>{ chunks.push(tarHeader(f.name,f.data.length,false),f.data); const pad=(512-f.data.length%512)%512; if(pad) chunks.push(new Uint8Array(pad)); });
+  chunks.push(new Uint8Array(1024));
+  const gz=new Blob(chunks).stream().pipeThrough(new CompressionStream('gzip'));
+  return await new Response(gz).blob();
+}
+const isZip=buf=>new DataView(buf).getUint32(0,true)===0x04034b50;
+async function toTarGz(buf){ return isZip(buf) ? await filesToTarGz(await unzip(buf)) : new Blob([buf]); }
+async function readWithProgress(res,onProgress){
+  const total=+res.headers.get('content-length')||0; if(!res.body||!total) return await res.arrayBuffer();
+  const r=res.body.getReader(), parts=[]; let got=0;
+  for(;;){ const {done,value}=await r.read(); if(done) break; parts.push(value); got+=value.length; onProgress&&onProgress(Math.round(got/total*100)); }
+  return await new Blob(parts).arrayBuffer();
+}
+async function cacheGet(){ try{ if(!window.caches) return null; const c=await caches.open(MODEL_CACHE); const r=await c.match(MODEL_KEY); return r?await r.blob():null; }catch(e){ return null; } }
+async function cachePut(blob){ try{ if(!window.caches) return; const c=await caches.open(MODEL_CACHE); await c.put(MODEL_KEY,new Response(blob)); }catch(e){} }
+async function modelBlob(onStep){
+  const cached=await cacheGet(); if(cached){ onStep('Spraakmodel uit de opslag van je browser…'); return cached; }
+  for(const src of MODEL_SOURCES){
+    try{ onStep('Spraakmodel downloaden (±40 MB, alleen de eerste keer)…'); const res=await fetch(src); if(!res.ok) continue;
+      const buf=await readWithProgress(res,p=>onStep(`Spraakmodel downloaden… ${p}%`)); onStep('Spraakmodel uitpakken…');
+      const blob=await toTarGz(buf); await cachePut(blob); return blob; }catch(e){ console.warn('model bron mislukt',src,e); }
+  }
+  const err=new Error('model_missing'); err.code='model_missing'; throw err;
+}
+/* Woordenlijst voor de herkenner: alleen woorden uit het verhaal (+[unk]). Dat maakt het sneller en nauwkeuriger. */
+function grammarWords(){ const set=new Set(); TOK.forEach(t=>t.text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu,'').split(/[\s-]+/).forEach(w=>w&&set.add(w))); return [...set,'[unk]']; }
+
+const Meter={ floor:.004, speaking:false, onset:0, waiting:false, lat:[],
+  feed(buf){ const d=buf.getChannelData(0); let s=0; for(let i=0;i<d.length;i+=4) s+=d[i]*d[i]; const rms=Math.sqrt(s/(d.length/4));
+    this.floor = this.speaking ? this.floor : this.floor*.97+rms*.03; const on=rms>Math.max(.012,this.floor*3.2);
+    if(on && !this.speaking){ this.onset=performance.now(); this.waiting=true; } this.speaking=on;
+    const lv=Math.min(1,rms*14); const el=document.getElementById('lvl'); if(el) el.style.setProperty('--lv',lv.toFixed(2)); },
+  heard(){ if(!this.waiting) return; this.waiting=false; const ms=performance.now()-this.onset; if(ms<4000){ this.lat.push(ms); if(this.lat.length>8) this.lat.shift(); } },
+  avg(){ return this.lat.length ? Math.round(this.lat.reduce((a,b)=>a+b,0)/this.lat.length) : null; } };
+
+const Rec={ kind:null, model:null, loading:null, rec:null, ctx:null, stream:null, src:null, node:null, want:false,
+  async detect(){
+    const ok=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.WebAssembly&&window.Worker&&('DecompressionStream' in window)&&('CompressionStream' in window));
+    this.kind = ok ? 'vosk' : null;
+    if(ok) cacheGet().then(b=>{ if(b) $('modelState').innerHTML='✅ Het spraakmodel staat al in je browser. Starten gaat snel.'; });
+  },
+  ensureModel(onStep){
+    if(this.model) return Promise.resolve(this.model);
+    if(!this.loading) this.loading=(async()=>{
+      onStep('Spraakherkenning laden…'); await loadScript(VOSK_LIB);
+      const blob=await modelBlob(onStep); onStep('Spraakmodel starten…');
+      const m=await Vosk.createModel(URL.createObjectURL(blob)); this.model=m; return m;
+    })().catch(e=>{ this.loading=null; throw e; });
+    return this.loading;
+  },
+  makeRec(m){
+    const grammar = SET.grammar ? JSON.stringify(grammarWords()) : undefined;
+    this.rec=new m.KaldiRecognizer(this.ctx.sampleRate, grammar);
+    this.rec.on('partialresult',msg=>{ const t=(msg.result&&msg.result.partial||'').replace(/\[unk\]/g,' ').trim(); if(t){ Meter.heard(); hear(t,false); } });
+    this.rec.on('result',msg=>{ const t=(msg.result&&msg.result.text||'').replace(/\[unk\]/g,' ').trim(); if(t) Meter.heard(); hear(t,true); });
+    this.node=this.ctx.createScriptProcessor(2048,1,1);
+    this.node.onaudioprocess=e=>{ if(!this.want||!this.rec) return; Meter.feed(e.inputBuffer); try{ this.rec.acceptWaveform(e.inputBuffer); }catch(err){} };
+    this.node.connect(this.ctx.destination);
+  },
+  /* Testmodus: een opname van een voorlezend kind afspelen alsof het live voorleest */
+  startFile(file){
+    this.want=true;
+    try{ if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); this.ctx.resume(); }catch(e){}
+    const step=t=>{ setStatus('Even geduld…',t); const m=$('modelState'); if(m) m.textContent='⏳ '+t; };
+    Promise.all([this.ensureModel(step), file.arrayBuffer().then(b=>this.ctx.decodeAudioData(b))]).then(([m,audio])=>{
+      if(!this.want) return;
+      this.makeRec(m);
+      const src=this.ctx.createBufferSource(); src.buffer=audio; this.src=src;
+      src.connect(this.node); src.connect(this.ctx.destination);
+      src.onended=()=>setTimeout(()=>{ if(this.src===src) this.stop(); },1500);
+      src.start(); listeningUI(true); setStatus('Opname wordt meegelezen…','De pagina luistert naar de opname alsof een kind live voorleest.');
+    }).catch(err=>{ console.warn(err); this.want=false; listeningUI(false);
+      explainReason(err&&err.code==='model_missing'?'model_missing':(err&&err.message==='lib')?'lib':(err&&err.name==='EncodingError')?'bad_audio':'upstream_error'); });
+  },
+  start(){ // vanuit de klik: AudioContext meteen maken
+    this.want=true;
+    try{ if(!this.ctx) this.ctx=new (window.AudioContext||window.webkitAudioContext)(); this.ctx.resume(); }catch(e){}
+    const step=t=>{ setStatus('Even geduld…',t); const m=$('modelState'); if(m) m.textContent='⏳ '+t; };
+    const micP=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
+    Promise.all([this.ensureModel(step),micP]).then(([m,stream])=>{
+      if(!this.want){ stream.getTracks().forEach(t=>t.stop()); return; }
+      this.stream=stream; this.makeRec(m);
+      this.src=this.ctx.createMediaStreamSource(stream); this.src.connect(this.node);
+      const m2=$('modelState'); if(m2) m2.innerHTML='✅ Het spraakmodel staat in je browser. De volgende keer start het meteen.';
+      listeningUI(true);
+    }).catch(err=>{ console.warn(err); this.want=false; listeningUI(false);
+      const n=err&&err.name; explainReason(err&&err.code==='model_missing'?'model_missing': (n==='NotAllowedError'||n==='SecurityError')?'not_granted': n==='NotFoundError'?'no_mic': (err&&err.message==='lib')?'lib':'upstream_error'); });
+  },
+  stop(){ this.want=false;
+    try{ if(this.src&&this.src.stop) this.src.stop(); }catch(e){}
+    try{ this.node&&this.node.disconnect(); this.src&&this.src.disconnect(); }catch(e){}
+    if(this.stream) this.stream.getTracks().forEach(t=>t.stop());
+    if(this.rec){ try{ this.rec.remove(); }catch(e){} }
+    this.node=this.src=this.stream=this.rec=null; const el=$('lvl'); if(el) el.style.setProperty('--lv',0); listeningUI(false); },
+  active(){ return this.want; }
+};
+async function useModelFile(file){
+  const m=$('modelState'); m.textContent='⏳ Modelbestand inlezen…';
+  try{ const blob=await toTarGz(await file.arrayBuffer()); await cachePut(blob); Rec.model=null; Rec.loading=null;
+    m.innerHTML='✅ Modelbestand opgeslagen in je browser. Druk op <b>Ik ga zelf lezen</b>.'; }
+  catch(e){ console.warn(e); m.textContent='⚠️ Dit bestand kon niet gelezen worden. Kies vosk-model-small-nl-0.22.zip.'; }
+}
+let lastHeard='';
+function hear(text,final){
+  const all=toWords(text); S.partialCount=final?0:all.length;
+  const words=S.skipWords?all.slice(S.skipWords):all; if(final) S.skipWords=0;
+  if(!words.length && !final) return;
+  const p=align(S.phraseStart,words); if(p>S.pos) setPos(p);
+  if(final) S.phraseStart=S.pos;
+  lastHeard=text.trim(); if(lastHeard){ const a=Meter.avg(); $('statusSub').innerHTML='Ik hoor: “'+esc(lastHeard.split(/\s+/).slice(-8).join(' '))+'”'+(a!=null?' <span class="lat" title="Gemiddelde tijd van beginnen met praten tot het eerste herkende woord">⚡ ±'+a+' ms</span>':''); }
+}
+function listeningUI(on){ $('micBtn').classList.toggle('on',on);
+  if(on){ setStatus('Ik lees met je mee…','Lees rustig hardop. Lukt een woord niet? Tik erop.'); startStuckWatch(); }
+  else if(S.mode==='mic' && S.pos<TOK.length){ setStatus('Microfoon staat uit','Druk op de microfoon om verder te lezen.'); stopStuckWatch(); } }
+function explainReason(r){
+  const msg={ not_granted:'De microfoon mag niet gebruikt worden. Sta de microfoon toe. In een Claude-artifact werkt de microfoon niet: open deze pagina via GitHub Pages of localhost.', dismissed:'Je hebt de vraag om de microfoon gesloten. Druk nog eens op de microfoon.',
+    unavailable:'Meelezen met de microfoon werkt niet in deze browser of dit account. Gebruik Chrome of Edge, of bekijk de demo.', rate_limited:'De microfoon is even bezet. Probeer het zo nog eens.',
+    hidden:'Het lezen is gepauzeerd omdat je het venster verliet.', time_limit:'De microfoon is na een uur gestopt.', upstream_error:'Er ging iets mis met de spraakherkenning. Probeer het nog eens.', model_missing:'Het spraakmodel kon niet gedownload worden. Kies het modelbestand zelf in het startscherm (zie de README).', lib:'De spraakherkenning kon niet geladen worden. Is er internet? De eerste keer is dat nodig.', no_mic:'Er is geen microfoon gevonden.', bad_audio:'Deze opname kan de browser niet afspelen. Probeer een .mp3, .m4a, .wav of .webm-bestand.' }[r] || 'Er ging iets mis met de microfoon.';
+  setStatus('Microfoon gestopt',msg); toast('🎤 '+msg);
+}
+function esc(x){ return String(x).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function setStatus(t,s){ $('statusTitle').textContent=t; $('statusSub').textContent=s||' '; }
+function startStuckWatch(){ stopStuckWatch(); S.lastMove=performance.now();
+  S.stuckTimer=setInterval(()=>{ if(S.pos<TOK.length && performance.now()-S.lastMove>7000) TOK[S.pos].el.classList.add('stuck'); },1000); }
+function stopStuckWatch(){ clearInterval(S.stuckTimer); }
+
+/* ---------- demo & handmatig ---------- */
+function demoStep(){
+  if(S.mode!=='demo' || S.pos>=TOK.length){ stopDemo(); return; }
+  const t=TOK[S.pos]; setPos(S.pos+1); S.phraseStart=S.pos;
+  const mult=parseFloat($('speedSel').value); let ms=(230+t.text.length*55)*mult;
+  if(/[.!?]['’]?$/.test(t.text)) ms+=520*mult; else if(/[,:]['’]?$/.test(t.text)) ms+=260*mult;
+  if(t.cues.length) ms+=900; // even tijd om te luisteren
+  S.demoTimer=setTimeout(demoStep,ms);
+}
+function stopDemo(){ clearTimeout(S.demoTimer); S.demoTimer=null; $('demoBtn').innerHTML='▶️ Demo'; if(S.mode==='demo' && S.pos<TOK.length) setStatus('Demo gepauzeerd','Druk op Demo om verder te gaan, of tik op een woord.'); }
+function beginMode(m){
+  if(S.mode==='mic' && m!=='mic') Rec.stop();
+  if(S.mode==='demo' && m!=='demo') stopDemo();
+  S.mode=m;
+  if(m==='manual') setStatus('Zelf doorklikken','Druk op de spatiebalk of → voor het volgende woord, ← om terug te gaan.');
+}
+
+/* ---------- start, einde, opnieuw ---------- */
+function resetStory(){
+  stopDemo(); if(Rec.active()) Rec.stop(); stopStuckWatch(); Snd.stopAll();
+  S.fired.clear(); S.startTime=0; S.endTime=0; S.phraseStart=0;
+  S.skipWords=0; S.partialCount=0; closeWordMenu();
+  TOK.forEach(t=>t.el.classList.remove('read','cur','fired','stuck')); S.pos=-1; setPos(0,{silent:true});
+  S.world=WORLD0(); fx.innerHTML=''; syncWorld(); $('textCard').scrollTop=0;
+}
+function ambienceStart(){ Snd.init(); syncWorld(); }
+function startMic(){ // vanuit klik, synchroon
+  if(!Rec.kind) return;
+  ambienceStart(); hideModal('startModal'); beginMode('mic'); Rec.start();
+}
+function startDemo(){ ambienceStart(); hideModal('startModal'); beginMode('demo'); $('demoBtn').innerHTML='⏸ Pauze'; setStatus('Demo: zo leest een kind mee','De computer doet alsof iemand hardop leest.'); demoStep(); }
+function startManual(){ ambienceStart(); hideModal('startModal'); beginMode('manual'); }
+function finish(){
+  stopDemo(); if(Rec.active()) Rec.stop(); stopStuckWatch();
+  const secs=Math.max(1,Math.round(((S.endTime||performance.now())-(S.startTime||performance.now()))/1000));
+  const cueTypes=[...new Set(TOK.flatMap(t=>t.cues))], found=new Set([...S.fired].map(k=>k.split('@')[0]));
+  $('stats').innerHTML=`<div class="stat"><b>${TOK.length}</b><span>woorden gelezen</span></div><div class="stat"><b>${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}</b><span>minuten</span></div><div class="stat"><b>${found.size}/${cueTypes.length}</b><span>geluiden ontdekt</span></div>`;
+  $('badges').innerHTML=cueTypes.map(c=>`<span class="badge ${found.has(c)?'':'miss'}">${CUES[c].ico} ${CUES[c].name}</span>`).join('');
+  setStatus('Verhaal uit! 🎉','Wil je het nog een keer lezen?'); showModal('endModal');
+}
+function showModal(id){ $(id).classList.remove('hidden'); }
+function hideModal(id){ $(id).classList.add('hidden'); }
+let tt; function toast(m){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t); } t.textContent=m; clearTimeout(tt); tt=setTimeout(()=>t.remove(),4200); }
+
+/* ---------- koppelingen ---------- */
+$('micBtn').onclick=()=>{ if(S.mode!=='mic'){ ambienceStart(); beginMode('mic'); }
+  if(Rec.active()) { Rec.stop(); } else { Snd.init(); Rec.start(); } };
+$('startMic').onclick=startMic; $('startDemo').onclick=startDemo; $('startManual').onclick=startManual;
+$('demoBtn').onclick=()=>{ Snd.init(); if(S.mode==='demo' && S.demoTimer){ stopDemo(); return; } if(S.pos>=TOK.length) resetStory(); syncWorld();
+  hideModal('startModal'); beginMode('demo'); $('demoBtn').innerHTML='⏸ Pauze'; setStatus('Demo: zo leest een kind mee','De computer doet alsof iemand hardop leest.'); demoStep(); };
+$('vol').oninput=e=>Snd.setVol(parseFloat(e.target.value));
+$('again').onclick=()=>{ hideModal('endModal'); resetStory(); showModal('startModal'); };
+$('close').onclick=()=>hideModal('endModal');
+$('restartTop').onclick=()=>{ hideModal('endModal'); resetStory(); showModal('startModal'); };
+$('infoTop').onclick=()=>{ hideModal('endModal'); if(S.mode==='demo') stopDemo(); showModal('startModal'); };
+document.addEventListener('keydown',e=>{
+  if(!$('startModal').classList.contains('hidden') || !$('endModal').classList.contains('hidden')) return;
+  if(e.key===' '||e.key==='ArrowRight'){ e.preventDefault(); Snd.init(); if(S.mode!=='manual') beginMode('manual'); setPos(S.pos+1); S.phraseStart=S.pos; }
+  if(e.key==='ArrowLeft'){ e.preventDefault(); if(S.mode!=='manual') beginMode('manual'); jumpTo(S.pos-1); }
+  if(e.key==='Escape') closeWordMenu();
+});
+document.addEventListener('click',e=>{ if(!e.target.closest('.wordmenu') && !e.target.closest('.w')) closeWordMenu(); });
+document.querySelectorAll('[data-setting]').forEach(b=>b.addEventListener('click',()=>toggleSetting(b.dataset.setting)));
+$('startFile').onclick=()=>$('audioFile').click();
+$('audioFile').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; hideModal('startModal'); if(S.pos>=TOK.length) resetStory(); ambienceStart(); beginMode('mic'); Rec.startFile(f); };
+$('modelFile').onchange=e=>{ const f=e.target.files[0]; if(f) useModelFile(f); };
+$('prevSent').onclick=()=>{ if(!S.mode) beginMode('manual'); prevSentence(); };
+
+/* ---------- init ---------- */
+if(window.top===window.self) $('artifactNote').classList.add('hidden');
+applySettings();
+buildText(); S.pos=-1; setPos(0,{silent:true});
+setStatus('Microfoon wordt gecontroleerd…','');
+Rec.detect().then(()=>{
+  const ok=!!Rec.kind; $('micBtn').disabled=!ok; $('startMic').disabled=!ok;
+  if(ok){ setStatus('Klaar om te lezen','Druk op de microfoon en lees hardop. De herkenning gebeurt op dit apparaat.'); }
+  else { setStatus('Geen microfoon beschikbaar','Bekijk de demo, of klik zelf door met de spatiebalk.');
+    const w=$('micWarn'); w.classList.remove('hidden'); w.innerHTML='⚠️ <span>Deze browser kan de spraakherkenning niet draaien. Gebruik een recente versie van Chrome of Edge, en open de pagina via https (GitHub Pages) of localhost.</span>'; }
+});
+</script>
+</body>
+</html>

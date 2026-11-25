@@ -4,6 +4,7 @@
 
 - Leestrainer Wereldreis: https://yusuf013.github.io/leestrainer-prototypes/wereldreis/
 - Lees & Luister: https://yusuf013.github.io/leestrainer-prototypes/lees-en-luister/
+- Lees & Luister – offline spraakherkenning (test): https://yusuf013.github.io/leestrainer-prototypes/lees-en-luister-offline/
 
 Twee klikbare prototypes, gemaakt als concept-uitbreiding op Estafette (Zwijsen).
 Elk prototype is **één los HTML-bestand** met alle code (HTML, CSS en JavaScript) erin.
@@ -53,6 +54,16 @@ Gebruik de live-link (GitHub Pages, https) in **Chrome of Edge** op een Chromebo
 - De verhalen, titels en thema's zijn **fictief**. Alleen de opbouw (groepen, M/E-niveaus, pakket A/B) is afgeleid van Estafette editie 3.
 - Logo's en mascottes van Zwijsen zijn bewust niet gebruikt.
 - De voortgang en het gekozen boek worden opgeslagen in de browser (`localStorage`) van degene die het gebruikt.
+
+## Lees & Luister – offline spraakherkenning (testversie)
+Map `lees-en-luister-offline/`. Hetzelfde prototype, maar de spraak wordt **op het apparaat zelf** herkend met [vosk-browser](https://github.com/ccoreilly/vosk-browser) (WebAssembly) en het Nederlandse model `vosk-model-small-nl-0.22`.
+
+- **Waarom:** minder vertraging, en de spraak van het kind gaat niet naar een server (beter voor de AVG).
+- **Woordenlijst:** de herkenner luistert standaard alleen naar woorden uit het verhaal. Dat maakt hem sneller en nauwkeuriger. Dit is uit te zetten in het startscherm.
+- **Eerste keer:** het model (±40 MB) wordt gedownload en omgezet. Daarna staat het in de opslag van de browser (Cache API) en start het direct, ook zonder internet.
+- **Model zelf hosten:** zet `vosk-model-small-nl-0.22.zip` in `lees-en-luister-offline/model/`. De pagina probeert die map eerst, en daarna de mirror op Hugging Face. Lukt beide niet, dan kan de gebruiker het zip-bestand zelf kiezen in het startscherm.
+- **Meten:** naast de herkende tekst staat ⚡ de gemiddelde tijd van beginnen met praten tot het eerste herkende woord. Gebruik dit om te vergelijken met de gewone versie.
+- **Werkt alleen** via https (GitHub Pages) of `localhost`, in een recente Chrome of Edge. Niet in een Claude-artifact, omdat die de microfoon blokkeert.
 
 ## Plan: samenvoegen tot één geheel
 Het idee is om Lees & Luister later als **leesmodus** in de verhaalpagina van de Wereldreis op te nemen:
